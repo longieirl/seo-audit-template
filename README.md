@@ -18,7 +18,19 @@ Get your API key at **serpapi.com/manage-api-key**
 
 ---
 
-## Step 2 — Run in Claude Code CLI
+## Step 2 — Open the template in Claude Code CLI
+
+Clone the repo and launch Claude from the project root so it has access to all scripts and config:
+
+```bash
+git clone https://github.com/longieirl/seo-audit-template.git
+cd seo-audit-template
+claude .
+```
+
+---
+
+## Step 3 — Run in Claude Code CLI
 
 Copy and paste the following prompt, replacing the URL and API key with your own:
 
