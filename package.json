@@ -2,6 +2,7 @@
   "name": "seo-audit-template",
   "version": "1.0.0",
   "description": "Reusable SEO content audit: crawl any site + SerpAPI keyword research + gap report + PDF",
+  "license": "MIT",
   "main": "run.js",
   "scripts": {
     "audit":    "node run.js all",
