@@ -15,6 +15,7 @@
 - [ ] No hardcoded file paths, API keys, or machine-specific values are included
 - [ ] `config.js` keywords are reset to placeholders before committing
 - [ ] Any new output files are covered by `.gitignore`
+- [ ] All commits are signed off (`git commit -s`) in accordance with the [DCO](https://developercertificate.org/)
 
 ## Related issues
 

@@ -1,26 +1,21 @@
-name: CLA Check
+name: DCO Check
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
 jobs:
-  cla:
-    name: Contributor License Agreement
+  dco:
+    name: Developer Certificate of Origin
     runs-on: ubuntu-latest
-    # Skip if the PR author is a codeowner (i.e. the repo owner)
     if: github.event.pull_request.user.login != 'longieirl'
     permissions:
-      contents: write
-      pull-requests: write
+      pull-requests: read
     steps:
-      - name: CLA Assistant
-        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_TOKEN }}
+      - uses: actions/checkout@v4
         with:
-          path-to-signatures: 'signatures/cla.json'
-          path-to-document: 'https://github.com/longieirl/seo-audit-template/blob/main/CLA.md'
-          branch: 'cla-signatures'
-          allowlist: longieirl
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check DCO sign-off
+        uses: tisonkun/actions-dco@v1
