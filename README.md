@@ -1,23 +1,57 @@
 # SEO Audit Template
 
-Reusable tool to crawl any website, research keywords via SerpAPI, generate a content gap report, and export a styled PDF — all from one config file.
+Reusable pipeline to crawl any website, research keywords via SerpAPI, generate a content gap report, and export a styled PDF — configured entirely via `config.js`.
 
 ---
 
-## Setup (one time)
+## Step 1 — Self-host the SerpAPI MCP Server
 
 ```bash
-cd seo-audit-template
-npm run setup
+git clone https://github.com/serpapi/serpapi-mcp.git
+cd serpapi-mcp
+uv sync && uv run src/server.py
 ```
 
-This installs Node dependencies, downloads the Playwright Chromium browser, and installs the Python `markdown` library needed for the PDF step.
+Get your API key at **serpapi.com/manage-api-key**
+
+> Free tier: **250 searches/month**
 
 ---
 
-## Configure
+## Step 2 — Run in Claude Code CLI
 
-Edit **`config.js`** before each run:
+Copy and paste the following prompt, replacing the URL and API key with your own:
+
+```
+Take the existing template project and I want you to help me create an SEO content
+strategy for my website [ https://your-client-site.com ].
+
+First, use Playwright to crawl my website and save all the content to markdown files
+locally. I want you to understand what topics I've already covered.
+
+Then use SerpAPI to research keywords in my niche. Look at what's ranking, what
+questions people are asking, and what my competitors are covering.
+
+Finally, compare my existing content against the opportunities you find. Give me a
+prioritised list of new pages I should create, with the keyword, estimated search
+volume, and why I have a chance of ranking.
+
+Additional information
+
+SerpAPI Key
+YOUR_SERP_API_KEY
+
+Required Output:
+- Convert the report SEO_CONTENT_STRATEGY.md into a readable PDF within the same directory
+- Show a section `What was Done`
+- Show a section `Key Findings`
+```
+
+---
+
+## Config
+
+All settings live in **`config.js`**:
 
 ```js
 module.exports = {
@@ -28,29 +62,29 @@ module.exports = {
   keywords: [
     'your keyword one',
     'your keyword two',
-    // add as many as needed (each = 1 SerpAPI credit)
+    // each keyword = 1 SerpAPI credit
   ],
-  outputDir: './output',
+  outputDir: './output',             // or an absolute path for a named client
 };
 ```
 
 ---
 
-## Run
+## Manual Run (optional)
+
+If you want to run steps individually outside of Claude:
 
 ```bash
-# Run everything (crawl + research + report)
-npm start
+npm run setup      # one-time: install deps + Playwright browser + Python markdown lib
 
-# Or run steps individually:
-npm run crawl      # Step 1: Crawl site → output/content/
-npm run research   # Step 2: SerpAPI research → output/serp/
-npm run report     # Step 3: Generate gap report → output/GAP_REPORT.md
-
-# Then write and export the strategy:
-# Step 4: Write output/SEO_CONTENT_STRATEGY.md (manually, based on the gap report)
-npm run pdf        # Step 5: Export SEO_CONTENT_STRATEGY.md → output/SEO_CONTENT_STRATEGY.pdf
+npm start          # run everything: crawl + research + report
+npm run crawl      # Step 1: crawl site       → output/content/
+npm run research   # Step 2: keyword research → output/serp/
+npm run report     # Step 3: gap report       → output/GAP_REPORT.md
+npm run pdf        # Step 5: export PDF       → output/SEO_CONTENT_STRATEGY.pdf
 ```
+
+> Step 4 is writing `output/SEO_CONTENT_STRATEGY.md` — Claude does this based on the gap report.
 
 ---
 
@@ -63,31 +97,20 @@ output/
     <page-slug>.md            ← one file per page
   serp/
     all_results.json          ← all keyword data combined
-    <keyword>.json            ← per-keyword results
+    <keyword>.json            ← per-keyword SERP results
   GAP_REPORT.md               ← auto-generated content gap report
-  SEO_CONTENT_STRATEGY.md     ← written strategy (Step 4)
+  SEO_CONTENT_STRATEGY.md     ← written strategy (Claude, Step 4)
   SEO_CONTENT_STRATEGY.pdf    ← exported PDF (Step 5)
 ```
 
 ---
 
-## Re-using for a new client
-
-1. Edit `config.js` with the new site URL, API key, and keywords
-2. Delete the `output/` folder contents (or they will be overwritten)
-3. Run `npm start`
-4. Write `output/SEO_CONTENT_STRATEGY.md` based on the gap report
-5. Run `npm run pdf` to export
-
----
-
 ## Tips
 
-- **SerpAPI free tier** gives 100 searches/month — enough for ~6 audits of 15 keywords each
-- Set `SERP_API_KEY` as an environment variable to avoid storing the key in config.js:
+- Set `SERP_API_KEY` as an env variable to avoid storing it in `config.js`:
   ```bash
   export SERP_API_KEY=your_key_here
-  npm start
   ```
-- The crawler uses `domcontentloaded` + a 4-second wait, which handles JS-rendered sites (Wix, Squarespace, etc.)
-- Run steps individually to re-generate just the report without re-crawling
+- Set `outputDir` to an absolute path (e.g. `../seo-strategy/clientname`) to keep client outputs separate from the template
+- The crawler uses `domcontentloaded` + a 4-second wait — handles JS-rendered sites (Wix, Squarespace, etc.)
+- Re-run individual steps without re-crawling: `npm run report` or `npm run pdf`
