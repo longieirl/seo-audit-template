@@ -1,0 +1,23 @@
+name: CLA Check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  cla:
+    name: Contributor License Agreement
+    runs-on: ubuntu-latest
+    # Skip if the PR author is a codeowner (i.e. the repo owner)
+    if: github.event.pull_request.user.login != 'longieirl'
+    steps:
+      - name: CLA Assistant
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/cla.json'
+          path-to-document: 'https://github.com/longieirl/seo-audit-template/blob/main/CLA.md'
+          branch: 'main'
+          allowlist: longieirl
