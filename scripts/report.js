@@ -112,7 +112,7 @@ ${allRelated.map(s => `- ${s}`).join('\n')}
 
 ---
 
-_Raw data: \`${path.resolve(config.outputDir, 'content')}\` and \`${path.resolve(config.outputDir, 'serp')}\`_
+_Raw data: \`${config.outputDir}/content\` and \`${config.outputDir}/serp\`_
 `;
 
   const reportPath = path.resolve(config.outputDir, 'GAP_REPORT.md');

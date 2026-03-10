@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Write(*-seo/SEO_CONTENT_STRATEGY.md)"
+    ]
+  }
+}
