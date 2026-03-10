@@ -35,28 +35,38 @@ claude .
 Copy and paste the following prompt, replacing the URL and API key with your own:
 
 ```
-Take the existing template project and I want you to help me create an SEO content
-strategy for my website [ https://your-client-site.com ].
+I want to create an SEO content strategy for [ https://your-client-site.com ].
 
-First, use Playwright to crawl my website and save all the content to markdown files
-locally. I want you to understand what topics I've already covered.
+This project uses the existing template at the current working directory. Do not
+rewrite any scripts — use the tools already in place:
 
-Then use SerpAPI to research keywords in my niche. Look at what's ranking, what
-questions people are asking, and what my competitors are covering.
+1. Update config.js with:
+   - siteUrl: https://your-client-site.com
+   - serpApiKey: YOUR_SERP_API_KEY
+   - searchCountry: ie  (change if not Ireland)
+   - keywords: research and choose 15-20 relevant keywords based on the site niche
+     after crawling — do not fill these in until you have read the site content
+   - outputDir: ../seo-strategy/<client-folder-name>
 
-Finally, compare my existing content against the opportunities you find. Give me a
-prioritised list of new pages I should create, with the keyword, estimated search
-volume, and why I have a chance of ranking.
+2. Run `npm run crawl` to crawl the site and save all pages as markdown.
+   Read the crawled content to understand the business, existing topics, and gaps
+   before choosing keywords.
 
-Additional information
+3. Update config.js keywords based on what you learned from the crawl, then run
+   `npm run research` to pull live SERP data via SerpAPI.
 
-SerpAPI Key
-YOUR_SERP_API_KEY
+4. Run `npm run report` to generate the gap report.
 
-Required Output:
-- Convert the report SEO_CONTENT_STRATEGY.md into a readable PDF within the same directory
-- Show a section `What was Done`
-- Show a section `Key Findings`
+5. Write ../seo-strategy/<client-folder-name>/SEO_CONTENT_STRATEGY.md containing:
+   ## What Was Done
+   ## Key Findings
+   ## Prioritised Page Recommendations (keyword, why it can rank, competitor gap)
+   ## Quick Wins (no new pages needed)
+   ## Build Order
+
+6. Run `npm run pdf` to export the strategy to PDF.
+
+Reset config.js back to placeholder defaults when complete.
 ```
 
 ---

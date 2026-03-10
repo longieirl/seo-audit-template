@@ -1,5 +1,10 @@
 node_modules/
 
+# Claude Code — ignore session files, keep shared commands
+.claude/settings.local.json
+.claude/memory/
+.claude/todos/
+
 # Output data — ignored so client data is never committed
 output/content/*.md
 output/serp/*.json
