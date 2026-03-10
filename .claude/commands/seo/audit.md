@@ -27,50 +27,57 @@ If no URL is provided, ask the user for it before proceeding.
 
 Work from the project root (current working directory). Do not rewrite any scripts — use the tools already in place.
 
-### 1. Derive client folder name
+### 1. Verify the SerpAPI MCP server is running
 
-From the URL, derive a short, lowercase, hyphenated client folder name (e.g. `https://birdbrain.ie` → `birdbrain`).
+Check that the SerpAPI MCP server is available. Run a test to confirm it is reachable:
 
-Set `outputDir` to `../seo-strategy/<client-folder-name>`.
+```bash
+curl -s http://localhost:3000/health 2>/dev/null || echo "not reachable"
+```
 
-### 2. Update config.js
+If it is not reachable, tell the user:
 
-Edit `./config.js` with:
-- `siteUrl`: the URL provided
-- `serpApiKey`: the API key provided (or keep `process.env.SERP_API_KEY || 'YOUR_SERP_API_KEY'` if none given)
-- `searchCountry`: `ie` (default — adjust if the site is clearly not Ireland-based)
-- `searchLanguage`: `en`
-- `keywords`: leave as placeholders for now — fill in after crawling
-- `outputDir`: `../seo-strategy/<client-folder-name>`
+> The SerpAPI MCP server does not appear to be running. Please start it first:
+> ```bash
+> cd serpapi-mcp
+> uv run src/server.py
+> ```
+> Then re-run `/seo:audit`.
+
+Do not proceed until the server is confirmed reachable.
+
+### 2. Derive client folder name
+
+From the URL, derive a short, lowercase, hyphenated folder name with a `-seo` suffix (e.g. `https://example.ie` → `example-seo`).
+
+Output is written to `./<client>-seo/` inside the project directory. These folders are gitignored.
 
 ### 3. Crawl the site
 
-Run:
+Run crawl only first so you can read the content before choosing keywords:
+
 ```bash
-npm run crawl
+node run.js crawl <url>
 ```
 
-Read the crawled content files in `../seo-strategy/<client-folder-name>/content/` to understand the business, existing topics, and content gaps.
+Read the crawled content in `./<client>-seo/content/` to understand the business, existing topics, and content gaps.
 
 ### 4. Choose keywords
 
 Based on what you learned from the crawl, update `config.js` with 15–20 relevant keywords tailored to the client's niche. Each keyword costs 1 SerpAPI credit.
 
-### 5. Run keyword research
+### 5. Run keyword research and gap report
 
 ```bash
-npm run research
+node run.js research <url> <serp-api-key>
+node run.js report <url>
 ```
 
-### 6. Generate the gap report
+If no API key was provided as an argument, omit it — the pipeline falls back to the `SERP_API_KEY` env var.
 
-```bash
-npm run report
-```
+### 6. Write the content strategy
 
-### 7. Write the content strategy
-
-Read the gap report at `../seo-strategy/<client-folder-name>/GAP_REPORT.md`, then write a `SEO_CONTENT_STRATEGY.md` file to `../seo-strategy/<client-folder-name>/SEO_CONTENT_STRATEGY.md` containing:
+Read the gap report at `./<client>-seo/GAP_REPORT.md`, then write `./<client>-seo/SEO_CONTENT_STRATEGY.md` containing:
 
 ```
 ## What Was Done
@@ -80,25 +87,22 @@ Read the gap report at `../seo-strategy/<client-folder-name>/GAP_REPORT.md`, the
 ## Build Order
 ```
 
-### 8. Export to PDF
+### 7. Export to PDF
 
 ```bash
 npm run pdf
 ```
 
-### 9. Reset config.js
+### 8. Reset config.js keywords
 
-Reset `./config.js` back to placeholder defaults:
-- `siteUrl`: `'https://your-client-site.com'`
-- `serpApiKey`: `process.env.SERP_API_KEY || 'YOUR_SERP_API_KEY'`
-- `searchCountry`: `'ie'`
-- `searchLanguage`: `'en'`
-- `keywords`: `['your keyword one', 'your keyword two', 'your keyword three']`
-- `outputDir`: `'./output'`
+Reset only the `keywords` array in `./config.js` back to placeholders:
+```js
+keywords: ['your keyword one', 'your keyword two', 'your keyword three'],
+```
 
-### 10. Confirm completion
+### 9. Confirm completion
 
 Tell the user the audit is complete and where to find the outputs:
-- Strategy doc: `../seo-strategy/<client-folder-name>/SEO_CONTENT_STRATEGY.md`
-- PDF: `../seo-strategy/<client-folder-name>/SEO_CONTENT_STRATEGY.pdf`
-- Gap report: `../seo-strategy/<client-folder-name>/GAP_REPORT.md`
+- Strategy doc: `./<client>-seo/SEO_CONTENT_STRATEGY.md`
+- PDF: `./<client>-seo/SEO_CONTENT_STRATEGY.pdf`
+- Gap report: `./<client>-seo/GAP_REPORT.md`

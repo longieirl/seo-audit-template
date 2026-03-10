@@ -5,9 +5,6 @@ const { chromium } = require('playwright-chromium');
 const fs = require('fs');
 const path = require('path');
 const TurndownService = require('turndown');
-const config = require('../config');
-
-const OUTPUT_DIR = path.resolve(config.outputDir, 'content');
 const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
 td.remove(['script', 'style', 'noscript', 'nav', 'footer', 'header', 'iframe']);
 
@@ -18,7 +15,8 @@ function slugify(url) {
     .replace(/[^a-z0-9_-]/gi, '') || 'index';
 }
 
-async function crawl() {
+async function crawl(config = require('../config')) {
+  const OUTPUT_DIR = path.resolve(config.outputDir, 'content');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const hostname = new URL(config.siteUrl).hostname;

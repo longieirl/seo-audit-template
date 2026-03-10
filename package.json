@@ -4,6 +4,7 @@
   "description": "Reusable SEO content audit: crawl any site + SerpAPI keyword research + gap report + PDF",
   "main": "run.js",
   "scripts": {
+    "audit":    "node run.js all",
     "start":    "node run.js all",
     "crawl":    "node run.js crawl",
     "research": "node run.js research",

@@ -3,14 +3,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const config = require('../config');
 
-const CONTENT_DIR = path.resolve(config.outputDir, 'content');
-const SERP_DIR    = path.resolve(config.outputDir, 'serp');
-const hostname    = new URL(config.siteUrl).hostname;
-
-function loadExistingContent() {
-  const indexPath = path.join(CONTENT_DIR, 'INDEX.md');
+function loadExistingContent(contentDir) {
+  const indexPath = path.join(contentDir, 'INDEX.md');
   if (!fs.existsSync(indexPath)) return [];
   return fs.readFileSync(indexPath, 'utf8')
     .split('\n')
@@ -23,8 +18,8 @@ function loadExistingContent() {
     });
 }
 
-function loadSerpResults() {
-  const allPath = path.join(SERP_DIR, 'all_results.json');
+function loadSerpResults(serpDir) {
+  const allPath = path.join(serpDir, 'all_results.json');
   if (!fs.existsSync(allPath)) return {};
   return JSON.parse(fs.readFileSync(allPath, 'utf8'));
 }
@@ -37,9 +32,13 @@ function isAlreadyCovered(keyword, existingPages) {
   );
 }
 
-function generateReport() {
-  const existing = loadExistingContent();
-  const serp     = loadSerpResults();
+function generateReport(config = require('../config')) {
+  const CONTENT_DIR = path.resolve(config.outputDir, 'content');
+  const SERP_DIR    = path.resolve(config.outputDir, 'serp');
+  const hostname    = new URL(config.siteUrl).hostname;
+
+  const existing = loadExistingContent(CONTENT_DIR);
+  const serp     = loadSerpResults(SERP_DIR);
   const date     = new Date().toLocaleDateString('en-IE', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // Collect all PAA questions

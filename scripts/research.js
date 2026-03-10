@@ -4,11 +4,8 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
-const config = require('../config');
 
-const OUTPUT_DIR = path.resolve(config.outputDir, 'serp');
-
-async function serpSearch(keyword) {
+async function serpSearch(keyword, config) {
   const url = new URL('https://serpapi.com/search');
   url.searchParams.set('api_key', config.serpApiKey);
   url.searchParams.set('engine', 'google');
@@ -22,7 +19,8 @@ async function serpSearch(keyword) {
   return res.json();
 }
 
-async function research() {
+async function research(config = require('../config')) {
+  const OUTPUT_DIR = path.resolve(config.outputDir, 'serp');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const allResults = {};
@@ -30,7 +28,7 @@ async function research() {
   for (const keyword of config.keywords) {
     console.log(`Searching: "${keyword}"`);
     try {
-      const data = await serpSearch(keyword);
+      const data = await serpSearch(keyword, config);
 
       const result = {
         keyword,

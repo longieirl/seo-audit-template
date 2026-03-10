@@ -1,11 +1,14 @@
 node_modules/
 
+# Client SEO output folders — never commit client data
+*-seo/
+
 # Claude Code — ignore session files, keep shared commands
 .claude/settings.local.json
 .claude/memory/
 .claude/todos/
 
-# Output data — ignored so client data is never committed
+# Default output directory
 output/content/*.md
 output/serp/*.json
 output/GAP_REPORT.md
