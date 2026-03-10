@@ -131,3 +131,9 @@ module.exports = {
 - The crawler uses `domcontentloaded` + a 4-second wait — handles JS-rendered sites (Wix, Squarespace, etc.)
 - Re-run individual steps without re-crawling: `node run.js report` or `npm run pdf`
 - All `*-seo/` output folders are gitignored — client data never gets committed
+
+---
+
+## License
+
+[MIT](./LICENSE) © [J Long](https://github.com/longieirl)
