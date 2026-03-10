@@ -1,7 +1,6 @@
 // scripts/research.js
 // Queries SerpAPI for each keyword and saves results as JSON
 
-const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 
