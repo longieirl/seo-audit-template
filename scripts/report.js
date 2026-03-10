@@ -1,0 +1,126 @@
+// scripts/report.js
+// Reads crawled content + SerpAPI data and generates a markdown gap report
+
+const fs = require('fs');
+const path = require('path');
+const config = require('../config');
+
+const CONTENT_DIR = path.resolve(config.outputDir, 'content');
+const SERP_DIR    = path.resolve(config.outputDir, 'serp');
+const hostname    = new URL(config.siteUrl).hostname;
+
+function loadExistingContent() {
+  const indexPath = path.join(CONTENT_DIR, 'INDEX.md');
+  if (!fs.existsSync(indexPath)) return [];
+  return fs.readFileSync(indexPath, 'utf8')
+    .split('\n')
+    .filter(l => l.startsWith('- ['))
+    .map(l => {
+      const title = l.match(/\[(.+?)\]/)?.[1] || '';
+      const url   = l.match(/\((.+?)\)/)?.[1] || '';
+      const file  = l.match(/`(.+?)`/)?.[1] || '';
+      return { title, url, file };
+    });
+}
+
+function loadSerpResults() {
+  const allPath = path.join(SERP_DIR, 'all_results.json');
+  if (!fs.existsSync(allPath)) return {};
+  return JSON.parse(fs.readFileSync(allPath, 'utf8'));
+}
+
+function isAlreadyCovered(keyword, existingPages) {
+  const kw = keyword.toLowerCase();
+  return existingPages.some(p =>
+    p.title.toLowerCase().includes(kw) ||
+    p.url.toLowerCase().includes(kw.replace(/\s+/g, '-'))
+  );
+}
+
+function generateReport() {
+  const existing = loadExistingContent();
+  const serp     = loadSerpResults();
+  const date     = new Date().toLocaleDateString('en-IE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Collect all PAA questions
+  const allPAA = [...new Set(
+    Object.values(serp).flatMap(r => r.people_also_ask || [])
+  )];
+
+  // Collect all related searches
+  const allRelated = [...new Set(
+    Object.values(serp).flatMap(r => r.related_searches || [])
+  )];
+
+  // Identify gaps — keywords not covered by any existing page
+  const gaps = Object.values(serp)
+    .filter(r => !r.error)
+    .map(r => ({
+      ...r,
+      covered: isAlreadyCovered(r.keyword, existing),
+      topCompetitor: r.organic?.[0]?.link || 'n/a',
+      rankingSelf: r.organic?.some(o => o.link.includes(hostname)),
+    }));
+
+  const uncovered = gaps.filter(g => !g.covered);
+  const alreadyRanking = gaps.filter(g => g.rankingSelf);
+
+  let md = `# SEO Content Gap Report — ${hostname}
+**Generated:** ${date}
+**Site:** ${config.siteUrl}
+
+---
+
+## Existing Pages (${existing.length} total)
+
+${existing.map(p => `- [${p.title}](${p.url})`).join('\n')}
+
+---
+
+## Keywords Already Ranking For
+
+${alreadyRanking.length === 0 ? '_None detected._' : alreadyRanking.map(r =>
+  `- **${r.keyword}** — top result: ${r.organic?.[0]?.title} (${r.organic?.[0]?.link})`
+).join('\n')}
+
+---
+
+## Content Gaps — Uncovered Keywords (${uncovered.length})
+
+${uncovered.map((r, i) => `
+### ${i + 1}. ${r.keyword}
+
+**Top competitor:** ${r.topCompetitor}
+**People Also Ask:**
+${r.people_also_ask?.length ? r.people_also_ask.map(q => `- ${q}`).join('\n') : '_None_'}
+**Related searches:**
+${r.related_searches?.slice(0, 5).length ? r.related_searches.slice(0, 5).map(s => `- ${s}`).join('\n') : '_None_'}
+**Top 5 results:**
+${r.organic?.map(o => `${o.position}. [${o.title}](${o.link})`).join('\n') || '_None_'}
+`).join('\n---\n')}
+
+---
+
+## People Also Ask — All Questions (${allPAA.length})
+
+${allPAA.map(q => `- ${q}`).join('\n')}
+
+---
+
+## Related Searches Across All Keywords
+
+${allRelated.map(s => `- ${s}`).join('\n')}
+
+---
+
+_Raw data: \`${path.resolve(config.outputDir, 'content')}\` and \`${path.resolve(config.outputDir, 'serp')}\`_
+`;
+
+  const reportPath = path.resolve(config.outputDir, 'GAP_REPORT.md');
+  fs.writeFileSync(reportPath, md);
+  console.log(`\nReport saved to ${reportPath}`);
+}
+
+module.exports = { generateReport };
+
+if (require.main === module) generateReport();

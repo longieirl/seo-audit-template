@@ -1,0 +1,20 @@
+{
+  "name": "seo-audit-template",
+  "version": "1.0.0",
+  "description": "Reusable SEO content audit: crawl any site + SerpAPI keyword research + gap report + PDF",
+  "main": "run.js",
+  "scripts": {
+    "start":    "node run.js all",
+    "crawl":    "node run.js crawl",
+    "research": "node run.js research",
+    "report":   "node run.js report",
+    "pdf":      "python3 generate_pdf.py \"$(node -e 'process.stdout.write(require(\"./config\").outputDir)')\"",
+    "setup":    "npm install && npx playwright install chromium && pip3 install playwright markdown"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "node-fetch": "^2.7.0",
+    "playwright-chromium": "^1.49.0",
+    "turndown": "^7.2.0"
+  }
+}

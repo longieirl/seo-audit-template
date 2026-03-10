@@ -1,0 +1,8 @@
+node_modules/
+
+# Output data — ignored so client data is never committed
+output/content/*.md
+output/serp/*.json
+output/GAP_REPORT.md
+output/SEO_CONTENT_STRATEGY.md
+output/SEO_CONTENT_STRATEGY.pdf
