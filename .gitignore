@@ -8,6 +8,11 @@ node_modules/
 .claude/memory/
 .claude/todos/
 
+# Local environment secrets — never commit
+.env
+.env.local
+.env.*.local
+
 # Default output directory
 output/content/*.md
 output/serp/*.json
