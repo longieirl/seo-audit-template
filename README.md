@@ -31,6 +31,8 @@ npm run audit -- https://yoursite.com YOUR_SERP_API_KEY
 
 That's it. Output lands in `./<site>-seo/` — see [Output](#output) for the full file tree.
 
+> **Claude Code users:** open the project with `claude .` and run `/seo:audit https://yoursite.com` — no flags needed.
+
 ---
 
 ## Example output
