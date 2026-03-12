@@ -12,7 +12,7 @@ const baseConfig         = require('./config');
 const [,, step = 'all', urlArg, keyArg] = process.argv;
 
 // CLI args override config.js values
-const config = {
+let config = {
   ...baseConfig,
   ...(urlArg && { siteUrl: urlArg }),
   ...(keyArg && { serpApiKey: keyArg }),
@@ -35,13 +35,18 @@ async function main() {
     await crawl(config);
   }
 
+  if (step === 'suggest') {
+    const { suggestKeywords } = require('./scripts/suggest-keywords');
+    const updated = await suggestKeywords(config);
+    console.log('\nKeywords selected:', updated.keywords);
+  }
+
   if (step === 'research' || step === 'all') {
     const hasPlaceholders = config.keywords.every(k => /^your keyword/i.test(k.trim()));
     if (hasPlaceholders) {
-      console.error('\nERROR: config.js still has placeholder keywords.');
-      console.error('Edit config.js and replace the keywords array with real search terms for your client.');
-      console.error('Example:\n  keywords: [\n    "landscaping dublin",\n    "garden design ireland",\n  ]');
-      process.exit(1);
+      const { suggestKeywords } = require('./scripts/suggest-keywords');
+      console.log('\n--- Extracting keyword suggestions from crawled content ---');
+      config = await suggestKeywords(config);
     }
     console.log('\n--- Step 2: Keyword research ---');
     await research(config);
