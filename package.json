@@ -4,6 +4,23 @@
   "description": "Reusable SEO content audit: crawl any site + SerpAPI keyword research + gap report + PDF",
   "license": "MIT",
   "main": "run.js",
+  "keywords": [
+    "seo",
+    "seo-audit",
+    "keyword-research",
+    "serpapi",
+    "web-crawler",
+    "content-gap",
+    "playwright",
+    "cli",
+    "nodejs",
+    "ai",
+    "claude-code",
+    "pdf-report"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "audit":    "node run.js all",
     "start":    "node run.js all",
@@ -14,7 +31,6 @@
     "setup":    "npm install && npx playwright install chromium && pip3 install playwright markdown"
   },
   "dependencies": {
-    "cheerio": "^1.0.0",
     "playwright-chromium": "^1.49.0",
     "turndown": "^7.2.0"
   }

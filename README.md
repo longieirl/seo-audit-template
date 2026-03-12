@@ -1,14 +1,63 @@
 # SEO Audit Template
 
-Crawl any website, research keywords via SerpAPI, generate a content gap report, and export a styled PDF — all from a single command.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Node >=18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
+Crawl any site, research keywords with SerpAPI, generate a content gap report and PDF strategy — all from the CLI in minutes.
+
+**Powered by**&nbsp;&nbsp;
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/1024px-OpenAI_Logo.svg.png" alt="" width="0">
+<a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Claude_Code-CLI-8A2BE2?logo=anthropic&logoColor=white" alt="Claude Code CLI"></a>&nbsp;
+<a href="https://serpapi.com"><img src="https://img.shields.io/badge/SerpAPI-keyword_research-orange?logo=google&logoColor=white" alt="SerpAPI"></a>
 
 ---
 
-## Prerequisites
+## Why this tool?
 
-### 1 — Clone and run the SerpAPI MCP server
+Most SEO audits require juggling Screaming Frog, Ahrefs, Google Sheets, and a copywriter. This template replaces that stack with a single CLI command: crawl → research → gap report → PDF strategy. No SaaS subscription, no browser extension — just Node.js, Python, and a SerpAPI key.
 
-The pipeline uses SerpAPI for keyword research. Self-host the MCP server locally:
+---
+
+## Quick Start
+
+**Requirements:** Node >=18, Python 3, a [SerpAPI key](https://serpapi.com/manage-api-key) (250 free searches/month)
+
+```bash
+git clone https://github.com/longieirl/seo-audit-template.git
+cd seo-audit-template
+npm run setup
+npm run audit -- https://yoursite.com YOUR_SERP_API_KEY
+```
+
+That's it. Output lands in `./<site>-seo/` — see [Output](#output) for the full file tree.
+
+---
+
+## Example output
+
+```
+example-seo/
+  GAP_REPORT.md               ← auto-generated content gap report
+  SEO_CONTENT_STRATEGY.md     ← written strategy (AI mode)
+  SEO_CONTENT_STRATEGY.pdf    ← exported PDF
+  content/
+    INDEX.md                  ← list of all crawled pages
+    about-us.md
+    blog-post-title.md
+  serp/
+    all_results.json
+    keyword-one.json
+```
+
+> **Screenshot placeholder** — add a screenshot of your terminal output or generated PDF here.
+
+---
+
+## AI Mode — Claude Code (recommended)
+
+For a fully automated run where Claude picks the best keywords, writes the strategy document, and exports the PDF:
+
+### 1 — Start the SerpAPI MCP server
 
 ```bash
 git clone https://github.com/serpapi/serpapi-mcp.git
@@ -16,62 +65,27 @@ cd serpapi-mcp
 uv sync && uv run src/server.py
 ```
 
-Get your API key at **serpapi.com/manage-api-key**
+Leave this running in a separate terminal tab.
 
-> Free tier: **250 searches/month**
-
-Leave this running in a terminal tab.
-
-### 2 — Clone this repo and install dependencies
-
-```bash
-git clone https://github.com/longieirl/seo-audit-template.git
-cd seo-audit-template
-npm run setup
-```
-
-`npm run setup` installs Node dependencies, the Playwright browser, and the Python PDF library.
-
----
-
-## Running an audit
-
-### Option A — Claude Code (recommended)
-
-Open the project in Claude Code CLI and use the built-in skill:
+### 2 — Run the audit skill
 
 ```bash
 claude .
 ```
 
-Then run:
+Then:
 
 ```
 /seo:audit https://yoursite.com YOUR_SERP_API_KEY
 ```
 
-Claude will verify the SerpAPI MCP server is reachable, crawl the site, choose keywords, run research, write the strategy, and export a PDF — all automatically.
-
-If `SERP_API_KEY` is already set as an environment variable, the key argument is optional:
+If `SERP_API_KEY` is already exported, the key argument is optional:
 
 ```
 /seo:audit https://yoursite.com
 ```
 
-### Option B — Command line
-
-```bash
-npm run audit -- https://yoursite.com YOUR_SERP_API_KEY
-```
-
-Or set the key as an env variable and omit it:
-
-```bash
-export SERP_API_KEY=your_key_here
-npm run audit -- https://yoursite.com
-```
-
-Output is written to `./<site>-seo/` inside the project directory (gitignored).
+Claude verifies the MCP server, crawls the site, chooses keywords, runs research, writes the strategy, and exports a PDF — automatically.
 
 ---
 
@@ -86,7 +100,7 @@ Output is written to `./<site>-seo/` inside the project directory (gitignored).
     all_results.json          ← all keyword data combined
     <keyword>.json            ← per-keyword SERP results
   GAP_REPORT.md               ← auto-generated content gap report
-  SEO_CONTENT_STRATEGY.md     ← written strategy (Claude, Option A only)
+  SEO_CONTENT_STRATEGY.md     ← written strategy (AI mode only)
   SEO_CONTENT_STRATEGY.pdf    ← exported PDF
 ```
 
@@ -131,6 +145,12 @@ module.exports = {
 - The crawler uses `domcontentloaded` + a 4-second wait — handles JS-rendered sites (Wix, Squarespace, etc.)
 - Re-run individual steps without re-crawling: `node run.js report` or `npm run pdf`
 - All `*-seo/` output folders are gitignored — client data never gets committed
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). All contributions require a DCO sign-off (`git commit -s`).
 
 ---
 
