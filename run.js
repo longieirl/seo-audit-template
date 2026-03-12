@@ -36,6 +36,13 @@ async function main() {
   }
 
   if (step === 'research' || step === 'all') {
+    const hasPlaceholders = config.keywords.every(k => /^your keyword/i.test(k.trim()));
+    if (hasPlaceholders) {
+      console.error('\nERROR: config.js still has placeholder keywords.');
+      console.error('Edit config.js and replace the keywords array with real search terms for your client.');
+      console.error('Example:\n  keywords: [\n    "landscaping dublin",\n    "garden design ireland",\n  ]');
+      process.exit(1);
+    }
     console.log('\n--- Step 2: Keyword research ---');
     await research(config);
   }

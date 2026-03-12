@@ -26,12 +26,27 @@ Most SEO audits require juggling Screaming Frog, Ahrefs, Google Sheets, and a co
 git clone https://github.com/longieirl/seo-audit-template.git
 cd seo-audit-template
 npm run setup
+```
+
+**Before running the audit**, open `config.js` and set your client's keywords:
+
+```js
+keywords: [
+  'landscaping dublin',
+  'garden design ireland',
+  // each keyword = 1 SerpAPI credit
+],
+```
+
+Then run:
+
+```bash
 npm run audit -- https://yoursite.com YOUR_SERP_API_KEY
 ```
 
 That's it. Output lands in `./<site>-seo/` — see [Output](#output) for the full file tree.
 
-> **Claude Code users:** open the project with `claude .` and run `/seo:audit https://yoursite.com` — no flags needed.
+> **Claude Code users:** open the project with `claude .` and run `/seo:audit https://yoursite.com` — Claude picks the keywords for you automatically.
 
 ---
 
