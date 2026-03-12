@@ -72,6 +72,8 @@ example-seo/
 
 ## AI Mode — Claude Code (recommended)
 
+> **Requirements:** Claude Code requires a paid Claude account (Pro, Team, or Enterprise). Free Claude accounts do not have access to Claude Code CLI.
+
 For a fully automated run where Claude picks the best keywords, writes the strategy document, and exports the PDF:
 
 ### 1 — Start the SerpAPI MCP server
