@@ -12,6 +12,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.mcp.json
 
 # Default output directory
 output/content/*.md
