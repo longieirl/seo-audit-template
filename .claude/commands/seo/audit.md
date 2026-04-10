@@ -93,7 +93,7 @@ SEO Audit Complete — <N> domains processed
 
 ✓ <hostname>
   Strategy: ./<dirname>/SEO_CONTENT_STRATEGY.md
-  PDF:      ./<dirname>/SEO_CONTENT_STRATEGY.pdf
+  PDF:      ./<dirname>/<dirname-without-seo>-seo-strategy.pdf
 ```
 
 For any domain whose sub-agent returned an error:
@@ -262,5 +262,5 @@ keywords: ['your keyword one', 'your keyword two', 'your keyword three'],
 
 Tell the user the audit is complete and where to find the outputs:
 - Strategy doc: `./<client>-seo/SEO_CONTENT_STRATEGY.md`
-- PDF: `./<client>-seo/SEO_CONTENT_STRATEGY.pdf`
+- PDF: `./<client>-seo/<client>-seo-strategy.pdf`
 - Gap report: `./<client>-seo/GAP_REPORT.md`
