@@ -31,7 +31,7 @@
     "setup":    "npm install && npx playwright install chromium && pip3 install playwright markdown"
   },
   "dependencies": {
-    "playwright-chromium": "^1.49.0",
+    "playwright-chromium": "^1.59.1",
     "turndown": "^7.2.0"
   }
 }
