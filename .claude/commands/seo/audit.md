@@ -57,6 +57,52 @@ If domains_to_run is empty after this:
 
 Stop — do not proceed to Step B.
 
+### Step B: Spawn parallel sub-agents
+
+Spawn one sub-agent per domain in domains_to_run using the `Agent` tool. Launch ALL agents in a single message with multiple parallel tool calls — do not wait for one to finish before starting the next.
+
+Each sub-agent prompt must be fully self-contained. Use this template for each:
+
+---
+You are running a full SEO audit for: <URL>
+SerpAPI key: <key, or "use SERP_API_KEY env var or config.js">
+
+Follow these instructions exactly:
+
+1. Determine research mode — check MCP server at localhost:8000 (reachable = JSON error about API key), fall back to direct API key if not reachable.
+2. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
+3. Crawl the site: `node run.js crawl <URL>`. Read crawled content in ./<dirname>/content/. If only the homepage was captured, use WebFetch to supplement.
+4. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
+5. Run keyword research:
+   - MCP: call the `search` tool for each keyword with `{"params": {"engine": "google", "q": "<keyword>", "gl": "ie", "hl": "en", "num": "10"}, "mode": "compact"}`. Save results to ./<dirname>/serp/<keyword>.json and ./<dirname>/serp/all_results.json with fields: keyword, organic (array of {position, title, link, snippet}), people_also_ask (array of strings), related_searches (array of strings).
+   - Direct API: `node run.js research <URL> <key>`
+6. Generate gap report: `node run.js report <URL>`
+7. Write strategy doc at ./<dirname>/SEO_CONTENT_STRATEGY.md with sections: What Was Done, Key Findings, Prioritised Page Recommendations, Quick Wins, Build Order.
+8. Export PDF: `python3 generate_pdf.py ./<dirname>`. If Playwright Chromium not installed, run `playwright install chromium` first.
+9. Do NOT write to or reset config.js — this is a parallel run and config.js is shared. Skip the keyword write and reset steps entirely.
+
+When done, report: DONE: <URL>
+---
+
+### Step C: Report summary
+
+After all sub-agents complete, print:
+
+```
+SEO Audit Complete — <N> domains processed
+
+✓ <hostname>
+  Strategy: ./<dirname>/SEO_CONTENT_STRATEGY.md
+  PDF:      ./<dirname>/SEO_CONTENT_STRATEGY.pdf
+```
+
+For any domain whose sub-agent returned an error:
+
+```
+✗ <hostname> — FAILED
+  Re-run manually: /seo:audit <URL>
+```
+
 ### Single-domain mode
 
 If only one URL is provided, skip the multi-domain steps above. The single-domain flow begins here:
