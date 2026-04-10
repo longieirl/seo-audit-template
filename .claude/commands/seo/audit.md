@@ -24,7 +24,38 @@ Mode selection:
 - 1 URL → skip this section, proceed to single-domain instructions below
 - 2+ URLs → continue with multi-domain steps below
 
-_(Steps A, B, and C will be added below.)_
+### Step A: Check for existing audits
+
+For each URL in the list, derive the output directory name:
+1. Strip `www.` from the hostname
+2. Replace all `.` with `-`
+3. Append `-seo`
+
+Example: `https://www.staydingleway.ie` → `staydingleway-ie-seo`
+
+Check whether `./<dirname>/SEO_CONTENT_STRATEGY.md` exists for each domain:
+
+```bash
+ls ./<dirname>/SEO_CONTENT_STRATEGY.md 2>/dev/null && echo "exists" || echo "missing"
+```
+
+Build two lists:
+- new_domains — no existing strategy file found → always included in the run
+- existing_domains — strategy file found, note the last-modified date from `ls -l`
+
+If existing_domains is empty, proceed directly to Step B.
+
+If existing_domains is non-empty, use `AskUserQuestion` to ask the user — one question per existing domain — with options `["Re-run", "Skip"]`:
+
+> Completed audit already exists for `<dirname>/` (last modified: <date>). Re-run or skip?
+
+Add "Re-run" answers to domains_to_run. Exclude "Skip" answers.
+Add all new_domains to domains_to_run automatically.
+
+If domains_to_run is empty after this:
+> All domains already have completed audits. Nothing to do.
+
+Stop — do not proceed to Step B.
 
 ### Single-domain mode
 
