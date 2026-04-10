@@ -17,12 +17,18 @@ When `$ARGUMENTS` contains two or more URLs, this skill runs in **multi-domain m
 
 Split `$ARGUMENTS` on whitespace. Classify each token:
 
-- **URL token** — contains a `.` and no spaces, optionally prefixed with `http://` or `https://`. Normalise bare domains by prepending `https://` (e.g. `staydingleway.ie` → `https://staydingleway.ie`).
-- **API key token** — the last token that is NOT a URL. Use as the SerpAPI key. Falls back to `SERP_API_KEY` env var or `config.js` if absent.
+- URL token — contains a `.` and no spaces, optionally prefixed with `http://` or `https://`. Normalise bare domains by prepending `https://` (e.g. `staydingleway.ie` → `https://staydingleway.ie`).
+- API key token — the last token that is NOT a URL. Use as the SerpAPI key. Falls back to `SERP_API_KEY` env var or `config.js` if absent.
 
-**Mode selection:**
+Mode selection:
 - 1 URL → skip this section, proceed to single-domain instructions below
 - 2+ URLs → continue with multi-domain steps below
+
+_(Steps A, B, and C will be added below.)_
+
+### Single-domain mode
+
+If only one URL is provided, skip the multi-domain steps above. The single-domain flow begins here:
 
 Run a full SEO content strategy audit for the given URL using the pipeline in the current project directory.
 
@@ -32,6 +38,7 @@ Arguments from the command line: `$ARGUMENTS`
 
 Parse `$ARGUMENTS` as follows:
 - First argument: the client site URL (required)
+  Normalise bare domains by prepending https:// (e.g. staydingleway.ie → https://staydingleway.ie).
 - Second argument: the SerpAPI key (optional — falls back to `SERP_API_KEY` env var)
 
 If no URL is provided, ask the user for it before proceeding.
