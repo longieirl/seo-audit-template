@@ -9,9 +9,26 @@ Crawl any site, research keywords with SerpAPI, generate a content gap report an
 
 ---
 
-## Quick Start
+## Prerequisites
 
-**Requirements:** Node >=18, Python 3, a [SerpAPI key](https://serpapi.com/manage-api-key) (250 free searches/month — each keyword costs 1 credit)
+| Requirement | Version | Notes |
+|---|---|---|
+| [Node.js](https://nodejs.org) | >=18 | Runtime for all pipeline scripts |
+| [Python](https://www.python.org/downloads/) | >=3.9 | Required for PDF export only |
+| [pip](https://pip.pypa.io/en/stable/installation/) | any | Installs `markdown` and `playwright` Python packages |
+| [SerpAPI key](https://serpapi.com/manage-api-key) | — | 250 free searches/month; each keyword costs 1 credit |
+
+After cloning, run `npm run setup` — this installs all Node and Python dependencies and downloads the Playwright Chromium browser used for both crawling and PDF export.
+
+If the Playwright Python browser was not installed by setup, run:
+
+```bash
+playwright install chromium
+```
+
+---
+
+## Quick Start
 
 ```bash
 git clone https://github.com/longieirl/seo-audit-template.git
@@ -22,7 +39,7 @@ npm run audit -- https://yoursite.com YOUR_SERP_API_KEY
 
 Output lands in `./<site>-seo/`. If your `config.js` still has placeholder keywords, the tool will automatically suggest keywords extracted from the crawled content and prompt you to pick the ones you want.
 
-> **Claude Code users:** run `/seo:audit https://yoursite.com` — Claude handles keywords and strategy automatically. Requires a paid Claude account.
+> **Claude Code users:** the `/seo:audit` skill is bundled in this repo. Run `claude` in the project directory, then `/seo:audit https://yoursite.com` — Claude handles keywords and strategy automatically. Requires a paid Claude account.
 
 ---
 
@@ -51,9 +68,15 @@ No setup needed. Open [`prompts/seo-audit.md`](./prompts/seo-audit.md), copy the
 
 ## AI Mode — Claude Code
 
+The `/seo:audit` skill is bundled in this repo at `.claude/commands/seo/audit.md`. Claude Code automatically loads it when you open the project — no plugin installation required.
+
 For a fully automated run (keyword selection, strategy doc, PDF export):
 
-### 1 — Start the SerpAPI MCP server
+### Option A — With SerpAPI MCP server (recommended)
+
+The MCP server lets Claude call SerpAPI directly as a tool, without needing the API key passed as an argument.
+
+**1 — Start the MCP server** (once, in a separate terminal tab):
 
 ```bash
 git clone https://github.com/serpapi/serpapi-mcp.git
@@ -61,18 +84,38 @@ cd serpapi-mcp
 uv sync && uv run src/server.py
 ```
 
-Leave this running in a separate terminal tab.
+The server runs at `http://localhost:8000/{YOUR_API_KEY}/mcp`. Leave it running.
 
-### 2 — Run the audit skill
+**2 — Run the audit:**
 
 ```bash
-claude .
-/seo:audit https://yoursite.com YOUR_SERP_API_KEY
+claude
+/seo:audit https://yoursite.com
 ```
 
-Claude crawls the site, picks keywords, runs research, writes the strategy, and exports a PDF — automatically.
+Claude detects the MCP server, uses it for all keyword research, and completes the full pipeline automatically.
 
-> Requires a paid Claude account (Pro, Team, or Enterprise).
+### Option B — Direct API key (no MCP server needed)
+
+Pass the key as a second argument or set it as an environment variable:
+
+```bash
+export SERP_API_KEY=your_key_here
+claude
+/seo:audit https://yoursite.com
+```
+
+> Both options require a paid Claude account (Pro, Team, or Enterprise).
+
+### Multi-domain audits
+
+Pass multiple domains to audit them in parallel — one agent per domain, all running simultaneously:
+
+```bash
+/seo:audit staydingleway.ie thehawthornroomsdingle.com
+```
+
+If a completed audit already exists for any domain (`SEO_CONTENT_STRATEGY.md` present in the output folder), you will be asked whether to re-run or skip it before any work begins.
 
 ---
 
@@ -83,7 +126,7 @@ node run.js crawl    https://yoursite.com
 node run.js suggest  https://yoursite.com          # preview keyword suggestions
 node run.js research https://yoursite.com YOUR_SERP_API_KEY
 node run.js report   https://yoursite.com
-npm run pdf
+python3 generate_pdf.py ./yoursite-com-seo         # pass the output dir explicitly
 ```
 
 Add `--auto` to the `suggest` or `research` step to skip the interactive prompt.
@@ -111,9 +154,11 @@ module.exports = {
 
 ## Tips
 
-- The crawler handles JS-rendered sites (Wix, Squarespace, etc.)
-- Re-run individual steps without re-crawling: `node run.js report` or `npm run pdf`
+- The crawler handles JS-rendered sites (Wix, Squarespace, etc.). If only the homepage is captured, the content still gives enough signal for keyword selection
+- Re-run individual steps without re-crawling: `node run.js report` or `python3 generate_pdf.py ./<site>-seo`
+- `npm run pdf` uses the `outputDir` in `config.js` (defaults to `./output`) — pass the path explicitly when using URL-derived output dirs
 - All `*-seo/` output folders are gitignored — client data never gets committed
+- If `playwright install chromium` was not run after `npm run setup`, the PDF export will fail — run it once to fix
 
 ---
 
