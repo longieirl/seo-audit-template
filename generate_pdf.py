@@ -16,7 +16,10 @@ from pathlib import Path
 output_dir = Path(sys.argv[1]) if len(sys.argv) > 1 \
     else Path(os.environ.get('OUTPUT_DIR', Path(__file__).parent / 'output'))
 MD_FILE  = output_dir / 'SEO_CONTENT_STRATEGY.md'
-PDF_FILE = output_dir / 'SEO_CONTENT_STRATEGY.pdf'
+# Name the PDF after the domain slug derived from the output directory name
+# e.g. ./hawthornroomsdingle-com-seo -> hawthornroomsdingle-com-seo-strategy.pdf
+_dir_slug = output_dir.name.removesuffix('-seo') if output_dir.name.endswith('-seo') else output_dir.name
+PDF_FILE = output_dir / f'{_dir_slug}-seo-strategy.pdf'
 
 # Derive site name from the markdown title line (first # heading)
 md_text   = MD_FILE.read_text(encoding="utf-8")
