@@ -11,7 +11,7 @@ allowed-tools:
 
 ## Multi-Domain Mode
 
-When `$ARGUMENTS` contains two or more URLs, this skill runs in **multi-domain mode**. Single-URL invocations skip this section entirely and follow the single-domain instructions below unchanged.
+When `$ARGUMENTS` contains two or more URLs, this command runs in **multi-domain mode**. Single-URL invocations skip this section entirely and follow the single-domain instructions below unchanged.
 
 ### Argument parsing
 
@@ -156,7 +156,7 @@ Then fall back to Option B.
 
 Check for a key in this order:
 
-1. Second argument passed to the skill (e.g. `/seo:audit https://site.com MY_KEY`)
+1. Second argument passed to the command (e.g. `/seo:audit https://site.com MY_KEY`)
 2. `SERP_API_KEY` environment variable
 3. `serpApiKey` field already set in `config.js`
 

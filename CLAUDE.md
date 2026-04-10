@@ -34,7 +34,7 @@ run.js  ──►  scripts/crawl.js       →  {outputDir}/content/*.md
         ──►  scripts/suggest-keywords.js  (auto-triggered when keywords are placeholders)
         ──►  scripts/research.js     →  {outputDir}/serp/*.json
         ──►  scripts/report.js       →  {outputDir}/GAP_REPORT.md
-        ──►  generate_pdf.py         →  {outputDir}/SEO_CONTENT_STRATEGY.pdf
+        ──►  generate_pdf.py         →  {outputDir}/<domain>-seo-strategy.pdf
 ```
 
 **`run.js`** — CLI entrypoint. Parses `[step] [url] [serpApiKey]` args, merges them over `config.js`, derives `outputDir` from the URL hostname (`./example-ie-seo/`), and calls each script in sequence. `config` is declared `let` so `suggestKeywords` can reassign it.
@@ -62,4 +62,4 @@ run.js  ──►  scripts/crawl.js       →  {outputDir}/content/*.md
 
 ## AI mode (`/seo:audit`)
 
-The `.claude/commands/seo/audit.md` skill runs the full pipeline automatically: crawls the site, reads content to pick keywords, updates `config.js`, runs research and report, writes `SEO_CONTENT_STRATEGY.md`, exports PDF, then resets `config.js` keywords. Requires the SerpAPI MCP server running at `localhost:3000`.
+The `.claude/commands/seo/audit.md` command runs the full pipeline automatically: crawls the site, reads content to pick keywords, updates `config.js`, runs research and report, writes `SEO_CONTENT_STRATEGY.md`, exports PDF, then resets `config.js` keywords. Requires the SerpAPI MCP server running at `localhost:3000`.
