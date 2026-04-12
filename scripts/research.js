@@ -18,7 +18,7 @@ async function serpSearch(keyword, config) {
   return res.json();
 }
 
-async function research(config = require('../config')) {
+async function research(config) {
   const OUTPUT_DIR = path.resolve(config.outputDir, 'serp');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -61,4 +61,4 @@ async function research(config = require('../config')) {
 
 module.exports = { research };
 
-if (require.main === module) research().catch(console.error);
+if (require.main === module) research(require('../config')).catch(console.error);
