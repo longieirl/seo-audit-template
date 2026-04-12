@@ -22,5 +22,6 @@ output/SEO_CONTENT_STRATEGY.md
 output/SEO_CONTENT_STRATEGY.pdf
 output/*-seo-strategy.pdf
 
-# Claude Code plugin data
-docs/
+# Claude Code plugin data (exclude cache, allow project specs)
+docs/*
+!docs/superpowers/
