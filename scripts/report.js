@@ -32,7 +32,7 @@ function isAlreadyCovered(keyword, existingPages) {
   );
 }
 
-function generateReport(config = require('../config')) {
+function generateReport(config) {
   const CONTENT_DIR = path.resolve(config.outputDir, 'content');
   const SERP_DIR    = path.resolve(config.outputDir, 'serp');
   const hostname    = new URL(config.siteUrl).hostname;
@@ -122,4 +122,4 @@ _Raw data: \`${config.outputDir}/content\` and \`${config.outputDir}/serp\`_
 
 module.exports = { generateReport };
 
-if (require.main === module) generateReport();
+if (require.main === module) generateReport(require('../config'));

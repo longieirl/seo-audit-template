@@ -161,6 +161,7 @@ async function suggestKeywords(config) {
     process.exit(1);
   }
 
+  // Pipeline: extract headings → normalise → add geo variants → user selects
   const rawCandidates = extractCandidates(contentDir);
   const normalised    = normalise(rawCandidates);
   const candidates    = addGeoVariants(normalised, config.searchCountry || '');

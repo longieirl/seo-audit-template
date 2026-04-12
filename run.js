@@ -4,26 +4,29 @@
 //   node run.js [crawl|research|report|all] [url] [serpApiKey]
 //   npm run audit -- https://mysite.com MY_API_KEY
 
-const { crawl }          = require('./scripts/crawl');
-const { research }       = require('./scripts/research');
-const { generateReport } = require('./scripts/report');
-const baseConfig         = require('./config');
+const { crawl }            = require('./scripts/crawl');
+const { research }         = require('./scripts/research');
+const { generateReport }   = require('./scripts/report');
+const { suggestKeywords }  = require('./scripts/suggest-keywords');
 
-const [,, step = 'all', urlArg, keyArg] = process.argv;
+function buildConfig(argv) {
+  const [,, step = 'all', urlArg, keyArg] = argv;
+  const base = require('./config');
+  const overrides = {
+    ...(urlArg && { siteUrl: urlArg }),
+    ...(keyArg && { serpApiKey: keyArg }),
+  };
+  const merged = { ...base, ...overrides };
 
-// CLI args override config.js values
-let config = {
-  ...baseConfig,
-  ...(urlArg && { siteUrl: urlArg }),
-  ...(keyArg && { serpApiKey: keyArg }),
-};
+  if (urlArg && merged.outputDir === base.outputDir) {
+    const hostname = new URL(merged.siteUrl).hostname.replace(/^www\./, '');
+    merged.outputDir = `./${hostname.replace(/\./g, '-')}-seo`;
+  }
 
-// Derive outputDir from URL if not explicitly set and a URL was passed
-if (urlArg && config.outputDir === baseConfig.outputDir) {
-  const hostname = new URL(config.siteUrl).hostname.replace(/^www\./, '');
-  const slug = hostname.replace(/\./g, '-');
-  config.outputDir = `./${slug}-seo`;
+  return { step, config: merged };
 }
+
+const { step, config } = buildConfig(process.argv);
 
 async function main() {
   console.log(`\n=== SEO Audit Tool ===`);
@@ -36,20 +39,18 @@ async function main() {
   }
 
   if (step === 'suggest') {
-    const { suggestKeywords } = require('./scripts/suggest-keywords');
     const updated = await suggestKeywords(config);
     console.log('\nKeywords selected:', updated.keywords);
   }
 
   if (step === 'research' || step === 'all') {
-    const hasPlaceholders = config.keywords.every(k => /^your keyword/i.test(k.trim()));
-    if (hasPlaceholders) {
-      const { suggestKeywords } = require('./scripts/suggest-keywords');
+    let researchConfig = config;
+    if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
       console.log('\n--- Extracting keyword suggestions from crawled content ---');
-      config = await suggestKeywords(config);
+      researchConfig = await suggestKeywords(config);
     }
     console.log('\n--- Step 2: Keyword research ---');
-    await research(config);
+    await research(researchConfig);
   }
 
   if (step === 'report' || step === 'all') {

@@ -15,7 +15,7 @@ function slugify(url) {
     .replace(/[^a-z0-9_-]/gi, '') || 'index';
 }
 
-async function crawl(config = require('../config')) {
+async function crawl(config) {
   const OUTPUT_DIR = path.resolve(config.outputDir, 'content');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -76,4 +76,4 @@ async function crawl(config = require('../config')) {
 
 module.exports = { crawl };
 
-if (require.main === module) crawl().catch(console.error);
+if (require.main === module) crawl(require('../config')).catch(console.error);
