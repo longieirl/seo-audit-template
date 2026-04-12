@@ -37,7 +37,7 @@ run.js  ──►  scripts/crawl.js       →  {outputDir}/content/*.md
         ──►  generate_pdf.py         →  {outputDir}/<domain>-seo-strategy.pdf
 ```
 
-**`run.js`** — CLI entrypoint. Parses `[step] [url] [serpApiKey]` args, merges them over `config.js`, derives `outputDir` from the URL hostname (`./example-ie-seo/`), and calls each script in sequence. `config` is declared `let` so `suggestKeywords` can reassign it.
+**`run.js`** — CLI entrypoint. Parses `[step] [url] [serpApiKey]` args, merges them over `config.js`, derives `outputDir` from the URL hostname (`./example-ie-seo/`), and calls each script in sequence. `config` is a `const`; `suggestKeywords` returns an updated copy assigned to `researchConfig` locally.
 
 **`scripts/crawl.js`** — Playwright Chromium crawler. Visits pages with `domcontentloaded` + 4s wait (handles JS-rendered sites). Converts body HTML to Markdown via Turndown, stripping nav/header/footer/script. Saves one `.md` per page plus `INDEX.md`.
 

@@ -44,17 +44,14 @@ async function main() {
   }
 
   if (step === 'research' || step === 'all') {
-    const hasPlaceholders = config.keywords.every(k => /^your keyword/i.test(k.trim()));
-    if (hasPlaceholders) {
+    let researchConfig = config;
+    if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
       const { suggestKeywords } = require('./scripts/suggest-keywords');
       console.log('\n--- Extracting keyword suggestions from crawled content ---');
-      const updatedConfig = await suggestKeywords(config);
-      console.log('\n--- Step 2: Keyword research ---');
-      await research(updatedConfig);
-    } else {
-      console.log('\n--- Step 2: Keyword research ---');
-      await research(config);
+      researchConfig = await suggestKeywords(config);
     }
+    console.log('\n--- Step 2: Keyword research ---');
+    await research(researchConfig);
   }
 
   if (step === 'report' || step === 'all') {
