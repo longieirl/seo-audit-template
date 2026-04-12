@@ -4,9 +4,10 @@
 //   node run.js [crawl|research|report|all] [url] [serpApiKey]
 //   npm run audit -- https://mysite.com MY_API_KEY
 
-const { crawl }          = require('./scripts/crawl');
-const { research }       = require('./scripts/research');
-const { generateReport } = require('./scripts/report');
+const { crawl }            = require('./scripts/crawl');
+const { research }         = require('./scripts/research');
+const { generateReport }   = require('./scripts/report');
+const { suggestKeywords }  = require('./scripts/suggest-keywords');
 
 function buildConfig(argv) {
   const [,, step = 'all', urlArg, keyArg] = argv;
@@ -38,7 +39,6 @@ async function main() {
   }
 
   if (step === 'suggest') {
-    const { suggestKeywords } = require('./scripts/suggest-keywords');
     const updated = await suggestKeywords(config);
     console.log('\nKeywords selected:', updated.keywords);
   }
@@ -46,7 +46,6 @@ async function main() {
   if (step === 'research' || step === 'all') {
     let researchConfig = config;
     if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
-      const { suggestKeywords } = require('./scripts/suggest-keywords');
       console.log('\n--- Extracting keyword suggestions from crawled content ---');
       researchConfig = await suggestKeywords(config);
     }
