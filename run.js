@@ -9,11 +9,35 @@ const { research }         = require('./scripts/research');
 const { generateReport }   = require('./scripts/report');
 const { suggestKeywords }  = require('./scripts/suggest-keywords');
 
+function validateAndNormaliseUrl(raw) {
+  if (!raw || typeof raw !== 'string') {
+    throw new Error('No URL provided. Usage: node run.js [step] <url> [serpApiKey]');
+  }
+
+  let normalised = raw.trim();
+  if (!/^https?:\/\//i.test(normalised)) {
+    normalised = 'https://' + normalised;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(normalised);
+  } catch {
+    throw new Error(`Invalid URL: "${raw}". Did you mean https://${raw}?`);
+  }
+
+  if (parsed.hostname === 'localhost' || /^127\.|^192\.168\.|^10\./.test(parsed.hostname)) {
+    console.warn(`Warning: "${parsed.hostname}" looks like a local address — results may be incomplete.`);
+  }
+
+  return normalised;
+}
+
 function buildConfig(argv) {
   const [,, step = 'all', urlArg, keyArg] = argv;
   const base = require('./config');
   const overrides = {
-    ...(urlArg && { siteUrl: urlArg }),
+    ...(urlArg && { siteUrl: validateAndNormaliseUrl(urlArg) }),
     ...(keyArg && { serpApiKey: keyArg }),
   };
   const merged = { ...base, ...overrides };

@@ -19,7 +19,7 @@ async function crawl(config) {
   const OUTPUT_DIR = path.resolve(config.outputDir, 'content');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  const hostname = new URL(config.siteUrl).hostname;
+  const { hostname } = new URL(config.siteUrl);
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const visited = new Set();
