@@ -5,8 +5,6 @@ const { chromium } = require('playwright-chromium');
 const fs = require('fs');
 const path = require('path');
 const TurndownService = require('turndown');
-const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
-td.remove(['script', 'style', 'noscript', 'nav', 'footer', 'header', 'iframe']);
 
 function slugify(url) {
   return url
@@ -16,6 +14,11 @@ function slugify(url) {
 }
 
 async function crawl(config) {
+  const DEFAULT_STRIP = ['script', 'style', 'noscript', 'nav', 'footer', 'header', 'iframe'];
+  const stripElements = (config.crawl && config.crawl.stripElements) || DEFAULT_STRIP;
+  const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  td.remove(stripElements);
+
   const OUTPUT_DIR = path.resolve(config.outputDir, 'content');
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
