@@ -24,4 +24,9 @@ module.exports = {
 
   // Output directory (relative to project root)
   outputDir: './output',
+
+  // Optional: HTML elements to strip during crawl (default shown)
+  // crawl: {
+  //   stripElements: ['script', 'style', 'noscript', 'nav', 'footer', 'header', 'iframe'],
+  // },
 };
