@@ -24,12 +24,28 @@ function loadSerpResults(serpDir) {
   return JSON.parse(fs.readFileSync(allPath, 'utf8'));
 }
 
+function tokenise(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+const MATCH_THRESHOLD = 0.5;
+
 function isAlreadyCovered(keyword, existingPages) {
-  const kw = keyword.toLowerCase();
-  return existingPages.some(p =>
-    p.title.toLowerCase().includes(kw) ||
-    p.url.toLowerCase().includes(kw.replace(/\s+/g, '-'))
-  );
+  const kwTokens = tokenise(keyword);
+  if (kwTokens.length === 0) return false;
+
+  return existingPages.some(p => {
+    const pageTokens = new Set([
+      ...tokenise(p.title),
+      ...tokenise(p.url),
+    ]);
+    const matches = kwTokens.filter(t => pageTokens.has(t)).length;
+    return matches / kwTokens.length >= MATCH_THRESHOLD;
+  });
 }
 
 function generateReport(config) {
@@ -120,6 +136,6 @@ _Raw data: \`${config.outputDir}/content\` and \`${config.outputDir}/serp\`_
   console.log(`\nReport saved to ${reportPath}`);
 }
 
-module.exports = { generateReport };
+module.exports = { generateReport, isAlreadyCovered, tokenise };
 
 if (require.main === module) generateReport(require('../config'));

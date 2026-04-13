@@ -28,7 +28,8 @@
     "research": "node run.js research",
     "report":   "node run.js report",
     "pdf":      "python3 generate_pdf.py \"$(node -e 'process.stdout.write(require(\"./config\").outputDir)')\"",
-    "setup":    "npm install && npx playwright install chromium && pip3 install playwright markdown"
+    "setup":    "npm install && npx playwright install chromium && pip3 install playwright markdown",
+    "test":     "node --test scripts/report.test.js"
   },
   "dependencies": {
     "playwright-chromium": "^1.59.1",
