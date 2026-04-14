@@ -29,4 +29,8 @@ module.exports = {
   // crawl: {
   //   stripElements: ['script', 'style', 'noscript', 'nav', 'footer', 'header', 'iframe'],
   // },
+
+  // Optional: link audit thresholds (defaults used when absent)
+  // weakPageThreshold: 2,       // pages with ≤ N inbound body links = weak
+  // overlinkedMultiplier: 2,    // pages with > avg * N body inbound = overlinked
 };
