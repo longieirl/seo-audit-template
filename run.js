@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // run.js — main entry point
 // Usage:
-//   node run.js [crawl|research|report|all] [url] [serpApiKey]
+//   node run.js [crawl|link-audit|research|report|all] [url] [serpApiKey]
 //   npm run audit -- https://mysite.com MY_API_KEY
 
 const { crawl }            = require('./scripts/crawl');
+const { linkAudit }        = require('./scripts/link-audit');
 const { research }         = require('./scripts/research');
 const { generateReport }   = require('./scripts/report');
 const { suggestKeywords }  = require('./scripts/suggest-keywords');
@@ -60,6 +61,11 @@ async function main() {
   if (step === 'crawl' || step === 'all') {
     console.log('--- Step 1: Crawling site ---');
     await crawl(config);
+  }
+
+  if (step === 'link-audit' || step === 'all') {
+    console.log('\n--- Step 1b: Link graph analysis ---');
+    linkAudit(config);
   }
 
   if (step === 'suggest') {

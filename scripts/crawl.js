@@ -28,6 +28,7 @@ async function crawl(config) {
   const visited = new Set();
   const queue = [config.siteUrl];
   const results = [];
+  const graph = {};
 
   while (queue.length > 0) {
     const url = queue.shift();
@@ -44,7 +45,7 @@ async function crawl(config) {
       const h1        = await page.$eval('h1', el => el.innerText).catch(() => '');
       const bodyHtml  = await page.$eval('body', el => el.innerHTML).catch(() => '');
 
-      // Collect internal links
+      // Collect internal links for BFS queue (all DOM links including nav)
       const links = await page.$$eval('a[href]', as => as.map(a => a.href));
       for (const link of links) {
         try {
@@ -55,6 +56,22 @@ async function crawl(config) {
           }
         } catch {}
       }
+
+      // Collect body-content links for link graph, excluding nav/header/footer/iframe
+      const bodyLinks = await page.$$eval(
+        'body a[href]',
+        (as, stripped) => as.filter(a => !a.closest(stripped.join(','))).map(a => a.href),
+        stripElements
+      ).catch(() => []);
+      const seen = new Set();
+      for (const l of bodyLinks) {
+        try {
+          const u = new URL(l);
+          const clean = u.href.split('#')[0];
+          if (u.hostname === hostname && clean !== url) seen.add(clean);
+        } catch {}
+      }
+      graph[url] = [...seen];
 
       const markdown = td.turndown(bodyHtml);
       const slug     = slugify(url) || 'index';
@@ -69,6 +86,8 @@ async function crawl(config) {
   }
 
   await browser.close();
+
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'link-graph.json'), JSON.stringify(graph, null, 2));
 
   const index = results.map(r => `- [${r.title}](${r.url}) → \`${r.file}\``).join('\n');
   fs.writeFileSync(path.join(OUTPUT_DIR, 'INDEX.md'), `# Crawl Index — ${hostname}\n\n${index}\n`);

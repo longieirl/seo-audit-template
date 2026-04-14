@@ -5,7 +5,7 @@
 <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Claude_Code-CLI-8A2BE2?logo=anthropic&logoColor=white" alt="Claude Code CLI"></a>&nbsp;
 <a href="https://serpapi.com"><img src="https://img.shields.io/badge/SerpAPI-keyword_research-orange?logo=google&logoColor=white" alt="SerpAPI"></a>
 
-Crawl any site, research keywords with SerpAPI, generate a content gap report and PDF strategy — all from the CLI in minutes. No SaaS subscription, no browser extension.
+Crawl any site, research keywords with SerpAPI, analyse internal link structure, generate a content gap report and PDF strategy — all from the CLI in minutes. No SaaS subscription, no browser extension.
 
 ---
 
@@ -50,9 +50,11 @@ Output lands in `./<site>-seo/`. If your `config.js` still has placeholder keywo
   content/
     INDEX.md                  ← list of all crawled pages
     <page-slug>.md            ← one file per page
+    link-graph.json           ← body-content internal link map
   serp/
     all_results.json          ← all keyword data combined
     <keyword>.json            ← per-keyword SERP results
+  LINK_AUDIT.md               ← orphan, weak, and overlinked page report
   GAP_REPORT.md               ← auto-generated content gap report
   SEO_CONTENT_STRATEGY.md     ← written strategy (AI mode only)
   SEO_CONTENT_STRATEGY.pdf    ← exported PDF
@@ -122,10 +124,11 @@ If a completed audit already exists for any domain (`SEO_CONTENT_STRATEGY.md` pr
 ## Individual steps
 
 ```bash
-node run.js crawl    https://yoursite.com
-node run.js suggest  https://yoursite.com          # preview keyword suggestions
-node run.js research https://yoursite.com YOUR_SERP_API_KEY
-node run.js report   https://yoursite.com
+node run.js crawl      https://yoursite.com
+node run.js link-audit https://yoursite.com        # orphan/weak/overlinked page analysis → LINK_AUDIT.md
+node run.js suggest    https://yoursite.com        # preview keyword suggestions
+node run.js research   https://yoursite.com YOUR_SERP_API_KEY
+node run.js report     https://yoursite.com
 python3 generate_pdf.py ./yoursite-com-seo         # pass the output dir explicitly
 ```
 
