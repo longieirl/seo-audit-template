@@ -144,7 +144,9 @@ If no URL is provided, ask the user for it before proceeding.
 
 1. Second argument passed to the command
 2. `SERP_API_KEY` environment variable
-3. MCP server at `localhost:8000` (auto-detected)
+3. MCP server at `localhost:8000` (detected via healthcheck)
+
+> Note: this ordering applies only to argument parsing. Once Step 0 runs, MCP is the preferred research method (Option A) regardless of whether a key is also available.
 
 If neither argument nor env var is present, run the MCP healthcheck before stopping:
 
@@ -152,11 +154,11 @@ If neither argument nor env var is present, run the MCP healthcheck before stopp
 curl -s --max-time 2 http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
 ```
 
-- Response contains `"healthy"` → validate by calling the MCP `search` tool directly:
+- Response contains `"healthy"` → validate by calling the MCP `search` tool **directly from this session** (do NOT use curl for search validation — the session key is embedded in the MCP connection):
   ```json
   { "params": { "engine": "google", "q": "test", "num": "1" }, "mode": "compact" }
   ```
-  - Returns results → set `$RESEARCH_MODE=mcp`, leave `$SERP_KEY` empty, proceed to Step 1
+  - Returns results → set `$RESEARCH_MODE=mcp`, leave `$SERP_KEY` empty, proceed to Step 0 (preflight will confirm and pass through)
   - Returns auth/quota error → STOP with preflight failure message (see Step 0)
 - Not reachable → STOP with preflight failure message (see Step 0)
 
