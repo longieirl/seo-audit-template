@@ -59,13 +59,21 @@ If domains_to_run is empty after this:
 
 Stop — do not proceed to Step B.
 
-### Step B: Spawn parallel sub-agents
+### Step B: Pre-crawl all domains, then spawn parallel sub-agents
 
-Spawn one sub-agent per domain in domains_to_run using the `Agent` tool. Launch ALL agents in a single message with multiple parallel tool calls — do not wait for one to finish before starting the next.
+**Pre-crawl each domain before spawning sub-agents.** Run the Playwright crawl sequentially for each domain in domains_to_run so sub-agents work from rendered HTML rather than raw WebFetch. This prevents false positives from JS-rendered content (schema, OG tags, images, etc.) being missed.
+
+```bash
+node run.js crawl <URL>
+```
+
+Run this for each domain and confirm `./<dirname>/content/` is populated before proceeding to sub-agent spawning.
+
+Then spawn one sub-agent per domain using the `Agent` tool. Launch ALL agents in a single message with multiple parallel tool calls — do not wait for one to finish before starting the next.
 
 Each sub-agent prompt must be fully self-contained. Use this template for each:
 
-> **Important when building the prompt:** Replace `<SERP_KEY>` with the actual resolved key string from preflight. Replace `<RESEARCH_MODE>` with `mcp` or `direct`. Never tell the sub-agent to "check the env var" or "check config.js" — those will not be set in sub-agent context.
+> **Important when building the prompt:** Replace `<SERP_KEY>` with the actual resolved key string from preflight. Replace `<RESEARCH_MODE>` with `mcp` or `direct`. Replace `<CRAWLED_CONTENT>` with the full text of `./<dirname>/content/INDEX.md` plus the homepage `.md` file. Never tell the sub-agent to "check the env var" or "check config.js" — those will not be set in sub-agent context.
 
 ---
 You are running a full SEO audit for: <URL>
@@ -73,10 +81,15 @@ You are running a full SEO audit for: <URL>
 Research mode: <RESEARCH_MODE> (mcp | direct)
 SerpAPI key: <SERP_KEY>
 
+**Important:** The site has already been crawled using Playwright (which executes JavaScript). Use the pre-crawled content below — do NOT use WebFetch to re-fetch the site, as raw HTTP fetches miss JS-rendered content (schema markup, OG tags, dynamically injected elements) and produce false positives.
+
+Pre-crawled content from `./<dirname>/content/`:
+<CRAWLED_CONTENT>
+
 Follow these instructions exactly:
 
 1. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
-2. Crawl the site: `node run.js crawl <URL>`. Read crawled content in ./<dirname>/content/. If only the homepage was captured, use WebFetch to supplement.
+2. Read the pre-crawled content above to understand the site. Only use WebFetch as a fallback if a specific page is missing from the crawled content.
 3. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
 4. Run keyword research using the method below that matches your research mode:
 
@@ -193,15 +206,32 @@ If it returns `{"status":"healthy"...}`, the server is up. The key is embedded i
 
 **Option B — Direct API key (fallback, only if MCP not reachable)**
 
-Check for a key:
-```bash
-echo "SERP_API_KEY=${SERP_API_KEY:-not set}"
-node -e "const c = require('./config.js'); console.log('config key:', c.serpApiKey)"
-```
+Resolve the key by checking these sources in order — use the first non-placeholder value found:
 
-If a non-placeholder key is found, validate it:
+1. **CLI argument** — second token passed to the command
+2. **`SERP_API_KEY` env var** — set in shell profile or exported in terminal
+3. **`~/.claude/settings.json` env block** — Claude Code injects this at session start; read it directly:
+   ```bash
+   node -e "
+     const fs = require('fs');
+     const p = require('os').homedir() + '/.claude/settings.json';
+     try {
+       const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+       const k = (s.env || {}).SERP_API_KEY || '';
+       console.log(k && !k.includes('YOUR') ? k : '');
+     } catch { console.log(''); }
+   "
+   ```
+4. **`config.js` `serpApiKey` field** — only if it is not a placeholder:
+   ```bash
+   node -e "const c = require('./config.js'); const k = c.serpApiKey || ''; console.log(k && !k.includes('YOUR') ? k : '');"
+   ```
+
+Set `$SERP_KEY` to the first non-empty result from the above. If all return empty, no key is available.
+
+If a key was found, validate it:
 ```bash
-curl -s "https://serpapi.com/search.json?engine=google&q=test&num=1&api_key=${SERP_API_KEY}" \
+curl -s "https://serpapi.com/search.json?engine=google&q=test&num=1&api_key=${SERP_KEY}" \
   | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); process.exit(d.error?1:0)" \
   && echo "KEY_VALID" || echo "KEY_INVALID"
 ```
@@ -262,19 +292,33 @@ Then fall back to Option B.
 
 **Option B — Direct API key (fallback)**
 
-Check for a key in this order:
+Resolve the key by checking these sources in order — use the first non-placeholder value found:
 
-1. Second argument passed to the command (e.g. `/seo:audit https://site.com MY_KEY`)
-2. `SERP_API_KEY` environment variable
-3. `serpApiKey` field already set in `config.js`
+1. **CLI argument** — second token passed to the command
+2. **`SERP_API_KEY` env var** — set in shell profile or exported in terminal
+3. **`~/.claude/settings.json` env block** — Claude Code injects this at session start; read it directly:
+   ```bash
+   node -e "
+     const fs = require('fs');
+     const p = require('os').homedir() + '/.claude/settings.json';
+     try {
+       const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+       const k = (s.env || {}).SERP_API_KEY || '';
+       console.log(k && !k.includes('YOUR') ? k : '');
+     } catch { console.log(''); }
+   "
+   ```
+4. **`config.js` `serpApiKey` field** — only if it is not a placeholder:
+   ```bash
+   node -e "const c = require('./config.js'); const k = c.serpApiKey || ''; console.log(k && !k.includes('YOUR') ? k : '');"
+   ```
 
-If none are present, tell the user:
+If none return a value, tell the user:
 
-> No SerpAPI key found. Either start the MCP server or provide a key:
-> ```bash
-> export SERP_API_KEY=your_key_here
-> ```
-> Then re-run `/seo:audit`.
+> No SerpAPI key found. Options:
+> - Pass it as an argument: `/seo:audit https://site.com YOUR_KEY`
+> - Set env var: `export SERP_API_KEY=your_key_here`
+> - Add to `~/.claude/settings.json` under `"env": { "SERP_API_KEY": "your_key_here" }`
 
 Do not proceed without either the MCP server or an API key.
 
@@ -294,7 +338,9 @@ node run.js crawl <url>
 
 Read the crawled content in `./<client>-seo/content/` to understand the business, existing topics, and content gaps.
 
-If the crawler only captures the homepage (common on heavily JS-rendered sites like Wix or Squarespace), supplement by fetching the live site with the WebFetch tool to extract the full property/product/service inventory before choosing keywords.
+**The Playwright crawl executes JavaScript and captures the fully-rendered DOM** — use it as the authoritative source for what is actually on the page (schema markup, OG tags, image attributes, etc.). Do NOT use WebFetch to re-analyse pages already crawled, as raw HTTP fetches miss JS-rendered content and produce false positives.
+
+If the crawler only captures the homepage (common on heavily JS-rendered sites like Wix or Squarespace), use WebFetch only to discover the list of additional pages/services — then treat the crawled homepage content as the ground truth for on-page analysis.
 
 ### 4. Choose keywords
 

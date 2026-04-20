@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Write(*-seo/SEO_CONTENT_STRATEGY.md)"
+      "Write(*-seo/**)",
+      "Bash(curl *)",
+      "Bash(node run.js *)",
+      "Bash(python3 generate_pdf.py *)",
+      "Bash(npm test)",
+      "Bash(npm audit *)",
+      "Bash(lsof *)",
+      "Bash(ps *)",
+      "Bash(mkdir *-seo*)",
+      "Bash(playwright install *)"
     ]
   }
 }
