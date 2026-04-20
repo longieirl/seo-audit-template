@@ -148,78 +148,62 @@ Work from the project root (current working directory). Do not rewrite any scrip
 
 **Run this before crawling, before spawning sub-agents, before anything else.**
 
-Resolve the SerpAPI key in this order:
-1. Key passed as an argument (e.g. `/seo:audit https://site.com MY_KEY`)
-2. `SERP_API_KEY` environment variable
-3. MCP server running at `localhost:8000` (reachable = server is up; key is embedded in the session)
+Resolve the research mode in this order of preference:
+
+**Option A — MCP server (preferred)**
+
+Check if the MCP server is reachable:
 
 ```bash
-# Check env var
-echo "SERP_API_KEY=${SERP_API_KEY:-not set}"
-# Check config.js
-node -e "const c = require('./config.js'); console.log('config key:', c.serpApiKey)"
-# Check MCP server
-curl -s http://localhost:8000/health 2>/dev/null || echo "not reachable"
+curl -s http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
 ```
 
-**Decision table:**
-
-| MCP reachable? | Env/arg key present? | Action |
-|---|---|---|
-| Yes | (any) | Run MCP validation test — see below |
-| No | Yes (non-placeholder) | Run direct API validation test — see below |
-| No | No / placeholder | ❌ STOP — inform user |
-
-**If MCP server is reachable — run a live validation search:**
-
-Call the MCP `search` tool with a minimal test query to confirm the key works end-to-end:
+If it returns `{"status":"healthy"...}`, the server is up. The key is embedded in the Claude Code session's MCP connection — **do not attempt to read it from env vars or config.js, and do not test it via curl**. Instead, validate by calling the MCP `search` tool directly from this session with a 1-result test query:
 
 ```json
-{
-  "params": {
-    "engine": "google",
-    "q": "test",
-    "num": "1"
-  },
-  "mode": "compact"
-}
+{ "params": { "engine": "google", "q": "test", "num": "1" }, "mode": "compact" }
 ```
 
-- If the tool returns results → ✅ MCP validated, set `$RESEARCH_MODE=mcp`, proceed
-- If the tool returns an auth error (invalid API key, quota exceeded, 401) → ❌ STOP — server is up but key is invalid or quota exhausted
+- Returns results → ✅ set `$RESEARCH_MODE=mcp`, proceed
+- Returns auth/quota error → ❌ STOP — session key is invalid or quota exhausted
 
-**If using a direct API key — run a live validation call:**
+**Option B — Direct API key (fallback, only if MCP not reachable)**
 
+Check for a key:
+```bash
+echo "SERP_API_KEY=${SERP_API_KEY:-not set}"
+node -e "const c = require('./config.js'); console.log('config key:', c.serpApiKey)"
+```
+
+If a non-placeholder key is found, validate it:
 ```bash
 curl -s "https://serpapi.com/search.json?engine=google&q=test&num=1&api_key=${SERP_API_KEY}" \
-  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); \
-    process.exit(d.error ? 1 : 0)" \
+  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); process.exit(d.error?1:0)" \
   && echo "KEY_VALID" || echo "KEY_INVALID"
 ```
 
-- `KEY_VALID` → ✅ direct key validated, set `$RESEARCH_MODE=direct`, proceed
-- `KEY_INVALID` → ❌ STOP — key is invalid or quota exhausted
+- `KEY_VALID` → ✅ set `$RESEARCH_MODE=direct`, proceed
+- `KEY_INVALID` → ❌ STOP
 
-**If no key is available or validation fails, stop immediately and tell the user:**
+**If neither option is available, stop immediately:**
 
 > **Preflight failed — SerpAPI not available.**
 >
-> _If no key found:_
-> - Pass it as an argument: `/seo:audit https://site.com YOUR_KEY`
+> _No MCP server and no API key found:_
+> - Start the MCP server, or
+> - Pass a key as an argument: `/seo:audit https://site.com YOUR_KEY`, or
 > - Set the env var: `export SERP_API_KEY=your_key_here`
-> - Start the MCP server: see setup instructions below
 >
-> _If key found but invalid:_
-> - Check your SerpAPI account at https://serpapi.com/manage-api-key
-> - Confirm you have remaining credits (free tier: 100 searches/month)
+> _MCP server up but search failed:_
+> - Check your SerpAPI account credits at https://serpapi.com/manage-api-key
 >
-> Re-run `/seo:audit` once resolved. No audit credits have been used.
+> No audit credits have been used. Re-run once resolved.
 
 Do not proceed to crawling or any other step until preflight passes.
 
-**Store the resolved `$RESEARCH_MODE`** (`mcp` or `direct`) and **`$SERP_KEY`** (the actual key string, or `"mcp"` if using the server) for use in all subsequent steps and in every sub-agent prompt.
+**Store `$RESEARCH_MODE`** (`mcp` or `direct`) for use in all subsequent steps and sub-agent prompts.
 
-> **Sub-agent key scoping:** The MCP `search` tool is bound to the parent Claude Code session — sub-agents cannot inherit it. When spawning parallel sub-agents in multi-domain mode, always pass `$SERP_KEY` explicitly in the sub-agent prompt. If `$RESEARCH_MODE` is `mcp`, instruct sub-agents to call the MCP server directly via HTTP using the key extracted from the MCP server URL, or fall back to direct API mode with the key.
+> **Sub-agent key scoping:** The MCP session key is not accessible to sub-agents via env or config. Sub-agents must call the MCP server directly via HTTP with the `Authorization: Bearer` header. The key must be extracted from the MCP server URL or passed explicitly — see sub-agent template in Step B above.
 
 ### 1. Determine research mode
 
