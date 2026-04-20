@@ -148,22 +148,56 @@ curl -s http://localhost:8000/health 2>/dev/null || echo "not reachable"
 
 | MCP reachable? | Env/arg key present? | Action |
 |---|---|---|
-| Yes | (any) | ✅ Use MCP — proceed |
-| No | Yes (non-placeholder) | ✅ Use direct API key — proceed |
+| Yes | (any) | Run MCP validation test — see below |
+| No | Yes (non-placeholder) | Run direct API validation test — see below |
 | No | No / placeholder | ❌ STOP — inform user |
 
-If no key is available, **stop immediately** and tell the user:
+**If MCP server is reachable — run a live validation search:**
 
-> **Preflight failed — no SerpAPI key found.**
+Call the MCP `search` tool with a minimal test query to confirm the key works end-to-end:
+
+```json
+{
+  "params": {
+    "engine": "google",
+    "q": "test",
+    "num": "1"
+  },
+  "mode": "compact"
+}
+```
+
+- If the tool returns results → ✅ MCP validated, set `$RESEARCH_MODE=mcp`, proceed
+- If the tool returns an auth error (invalid API key, quota exceeded, 401) → ❌ STOP — server is up but key is invalid or quota exhausted
+
+**If using a direct API key — run a live validation call:**
+
+```bash
+curl -s "https://serpapi.com/search.json?engine=google&q=test&num=1&api_key=${SERP_API_KEY}" \
+  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); \
+    process.exit(d.error ? 1 : 0)" \
+  && echo "KEY_VALID" || echo "KEY_INVALID"
+```
+
+- `KEY_VALID` → ✅ direct key validated, set `$RESEARCH_MODE=direct`, proceed
+- `KEY_INVALID` → ❌ STOP — key is invalid or quota exhausted
+
+**If no key is available or validation fails, stop immediately and tell the user:**
+
+> **Preflight failed — SerpAPI not available.**
 >
-> Provide a key via one of:
+> _If no key found:_
 > - Pass it as an argument: `/seo:audit https://site.com YOUR_KEY`
 > - Set the env var: `export SERP_API_KEY=your_key_here`
 > - Start the MCP server: see setup instructions below
 >
-> Re-run `/seo:audit` once a key is available. No credits have been used.
+> _If key found but invalid:_
+> - Check your SerpAPI account at https://serpapi.com/manage-api-key
+> - Confirm you have remaining credits (free tier: 100 searches/month)
+>
+> Re-run `/seo:audit` once resolved. No audit credits have been used.
 
-Do not proceed to crawling or any other step until this check passes.
+Do not proceed to crawling or any other step until preflight passes.
 
 **Store the resolved `$RESEARCH_MODE`** (`mcp` or `direct`) and **`$SERP_KEY`** (the actual key string, or `"mcp"` if using the server) for use in all subsequent steps and in every sub-agent prompt.
 
