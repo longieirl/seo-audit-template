@@ -76,7 +76,9 @@ async function main() {
 
   if (step === 'research' || step === 'all') {
     const pf = await preflightResearch(config);
-    if (pf.proceed) {
+    if (!pf.proceed) {
+      console.log('\n--- Step 2: Keyword research skipped ---');
+    } else {
       let researchConfig = config;
       if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
         console.log('\n--- Extracting keyword suggestions from crawled content ---');
