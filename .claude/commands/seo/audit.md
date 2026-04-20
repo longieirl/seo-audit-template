@@ -63,25 +63,43 @@ Spawn one sub-agent per domain in domains_to_run using the `Agent` tool. Launch 
 
 Each sub-agent prompt must be fully self-contained. Use this template for each:
 
+> **Important when building the prompt:** Replace `<SERP_KEY>` with the actual resolved key string from preflight. Replace `<RESEARCH_MODE>` with `mcp` or `direct`. Never tell the sub-agent to "check the env var" or "check config.js" — those will not be set in sub-agent context.
+
 ---
 You are running a full SEO audit for: <URL>
-SerpAPI key: <key, or "use SERP_API_KEY env var or config.js">
+
+Research mode: <RESEARCH_MODE> (mcp | direct)
+SerpAPI key: <SERP_KEY>
 
 Follow these instructions exactly:
 
-1. Determine research mode — check MCP server at localhost:8000 (reachable = JSON error about API key), fall back to direct API key if not reachable.
-2. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
-3. Crawl the site: `node run.js crawl <URL>`. Read crawled content in ./<dirname>/content/. If only the homepage was captured, use WebFetch to supplement.
-4. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
-5. Run keyword research:
-   - MCP: call the `search` tool for each keyword with `{"params": {"engine": "google", "q": "<keyword>", "gl": "ie", "hl": "en", "num": "10"}, "mode": "compact"}`. Save results to ./<dirname>/serp/<keyword>.json and ./<dirname>/serp/all_results.json with fields: keyword, organic (array of {position, title, link, snippet}), people_also_ask (array of strings), related_searches (array of strings).
-   - Direct API: `node run.js research <URL> <key>`
+1. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
+2. Crawl the site: `node run.js crawl <URL>`. Read crawled content in ./<dirname>/content/. If only the homepage was captured, use WebFetch to supplement.
+3. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
+4. Run keyword research using the method below that matches your research mode:
+
+   **If research mode is `mcp`:**
+   For each keyword, make an HTTP POST to the MCP server using this exact curl pattern:
+   ```bash
+   curl -s -X POST "http://localhost:8000/mcp" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <SERP_KEY>" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"params":{"engine":"google","q":"KEYWORD_HERE","gl":"ie","hl":"en","num":"10"},"mode":"compact"}}}'
+   ```
+   Do NOT use GET. Do NOT use `/search`, `/sse`, or `/{key}/mcp` path formats. Do NOT omit the Authorization header.
+   Parse the response and save to ./<dirname>/serp/<slug>.json with fields: keyword, organic (array of {position, title, link, snippet}), people_also_ask (array of strings), related_searches (array of strings).
+
+   **If research mode is `direct`:**
+   Run: `node run.js research <URL> <SERP_KEY>`
+
+5. Combine all per-keyword files into ./<dirname>/serp/all_results.json (array of keyword objects).
 6. Generate gap report: `node run.js report <URL>`
 7. Write strategy doc at ./<dirname>/SEO_CONTENT_STRATEGY.md with sections: What Was Done, Key Findings, Prioritised Page Recommendations, Quick Wins, Build Order.
 8. Export PDF: `python3 generate_pdf.py ./<dirname>`. If Playwright Chromium not installed, run `playwright install chromium` first.
-9. Do NOT write to or reset config.js — this is a parallel run and config.js is shared. Skip the keyword write and reset steps entirely.
+9. Do NOT write to or reset config.js — this is a parallel run and config.js is shared.
 
 When done, report: DONE: <URL>
+If any curl returns a non-200 or an error field in the JSON, report: FAILED: <URL> — <reason>
 ---
 
 ### Step C: Report summary
@@ -212,13 +230,18 @@ There are two ways to run keyword research. Prefer MCP if the server is availabl
 Check if the MCP server is running:
 
 ```bash
-curl -s http://localhost:8000/health 2>/dev/null || echo "not reachable"
+curl -s http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
 ```
 
-If reachable, the server responds with a JSON error asking for an API key — that means it's up. Use the MCP `search` tool directly for all keyword research in step 5 instead of running `node run.js research`. The MCP server URL format is:
+Use `/healthcheck` — not `/health` or `/` (those return 401 without a key and are unreliable for reachability checks). A 200 response means the server is up.
 
-```
-http://localhost:8000/{SERP_API_KEY}/mcp
+If reachable, use the MCP `search` tool directly for all keyword research in step 5 instead of running `node run.js research`. Make requests via:
+
+```bash
+curl -s -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <SERP_KEY>" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"params":{"engine":"google","q":"KEYWORD","gl":"ie","hl":"en","num":"10"},"mode":"compact"}}}'
 ```
 
 If it is not reachable, tell the user they can optionally start it:
