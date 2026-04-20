@@ -136,9 +136,29 @@ Arguments from the command line: `$ARGUMENTS`
 Parse `$ARGUMENTS` as follows:
 - First argument: the client site URL (required)
   Normalise bare domains by prepending https:// (e.g. staydingleway.ie → https://staydingleway.ie).
-- Second argument: the SerpAPI key (optional — falls back to `SERP_API_KEY` env var)
+- Second argument: the SerpAPI key (optional — falls back to `SERP_API_KEY` env var, then MCP server)
 
 If no URL is provided, ask the user for it before proceeding.
+
+**Key resolution order (single-domain):**
+
+1. Second argument passed to the command
+2. `SERP_API_KEY` environment variable
+3. MCP server at `localhost:8000` (auto-detected)
+
+If neither argument nor env var is present, run the MCP healthcheck before stopping:
+
+```bash
+curl -s --max-time 2 http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
+```
+
+- Response contains `"healthy"` → validate by calling the MCP `search` tool directly:
+  ```json
+  { "params": { "engine": "google", "q": "test", "num": "1" }, "mode": "compact" }
+  ```
+  - Returns results → set `$RESEARCH_MODE=mcp`, leave `$SERP_KEY` empty, proceed to Step 1
+  - Returns auth/quota error → STOP with preflight failure message (see Step 0)
+- Not reachable → STOP with preflight failure message (see Step 0)
 
 ---
 
