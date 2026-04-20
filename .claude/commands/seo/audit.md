@@ -18,11 +18,13 @@ When `$ARGUMENTS` contains two or more URLs, this command runs in **multi-domain
 Split `$ARGUMENTS` on whitespace. Classify each token:
 
 - URL token — contains a `.` and no spaces, optionally prefixed with `http://` or `https://`. Normalise bare domains by prepending `https://` (e.g. `staydingleway.ie` → `https://staydingleway.ie`).
-- API key token — the last token that is NOT a URL. Use as the SerpAPI key. Falls back to `SERP_API_KEY` env var or `config.js` if absent.
+- API key token — the last token that is NOT a URL. Use as the SerpAPI key. Falls back to `SERP_API_KEY` env var.
 
 Mode selection:
 - 1 URL → skip this section, proceed to single-domain instructions below
 - 2+ URLs → continue with multi-domain steps below
+
+> **Sub-agent key requirement:** Sub-agents call the MCP server directly via HTTP — they do not use the parent session's MCP tool. The key must be resolved during preflight and passed explicitly in every sub-agent prompt so they can include it in the `Authorization: Bearer` header. If no key is resolvable from arguments or `SERP_API_KEY`, the preflight check (Step 0) will catch this before any agents are spawned.
 
 ### Step A: Check for existing audits
 
@@ -57,31 +59,62 @@ If domains_to_run is empty after this:
 
 Stop — do not proceed to Step B.
 
-### Step B: Spawn parallel sub-agents
+### Step B: Pre-crawl all domains, then spawn parallel sub-agents
 
-Spawn one sub-agent per domain in domains_to_run using the `Agent` tool. Launch ALL agents in a single message with multiple parallel tool calls — do not wait for one to finish before starting the next.
+**Pre-crawl each domain before spawning sub-agents.** Run the Playwright crawl sequentially for each domain in domains_to_run so sub-agents work from rendered HTML rather than raw WebFetch. This prevents false positives from JS-rendered content (schema, OG tags, images, etc.) being missed.
+
+```bash
+node run.js crawl <URL>
+```
+
+Run this for each domain and confirm `./<dirname>/content/` is populated before proceeding to sub-agent spawning.
+
+Then spawn one sub-agent per domain using the `Agent` tool. Launch ALL agents in a single message with multiple parallel tool calls — do not wait for one to finish before starting the next.
 
 Each sub-agent prompt must be fully self-contained. Use this template for each:
 
+> **Important when building the prompt:** Replace `<SERP_KEY>` with the actual resolved key string from preflight. Replace `<RESEARCH_MODE>` with `mcp` or `direct`. Replace `<CRAWLED_CONTENT>` with the full text of `./<dirname>/content/INDEX.md` plus the homepage `.md` file. Never tell the sub-agent to "check the env var" or "check config.js" — those will not be set in sub-agent context.
+
 ---
 You are running a full SEO audit for: <URL>
-SerpAPI key: <key, or "use SERP_API_KEY env var or config.js">
+
+Research mode: <RESEARCH_MODE> (mcp | direct)
+SerpAPI key: <SERP_KEY>
+
+**Important:** The site has already been crawled using Playwright (which executes JavaScript). Use the pre-crawled content below — do NOT use WebFetch to re-fetch the site, as raw HTTP fetches miss JS-rendered content (schema markup, OG tags, dynamically injected elements) and produce false positives.
+
+Pre-crawled content from `./<dirname>/content/`:
+<CRAWLED_CONTENT>
 
 Follow these instructions exactly:
 
-1. Determine research mode — check MCP server at localhost:8000 (reachable = JSON error about API key), fall back to direct API key if not reachable.
-2. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
-3. Crawl the site: `node run.js crawl <URL>`. Read crawled content in ./<dirname>/content/. If only the homepage was captured, use WebFetch to supplement.
-4. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
-5. Run keyword research:
-   - MCP: call the `search` tool for each keyword with `{"params": {"engine": "google", "q": "<keyword>", "gl": "ie", "hl": "en", "num": "10"}, "mode": "compact"}`. Save results to ./<dirname>/serp/<keyword>.json and ./<dirname>/serp/all_results.json with fields: keyword, organic (array of {position, title, link, snippet}), people_also_ask (array of strings), related_searches (array of strings).
-   - Direct API: `node run.js research <URL> <key>`
+1. Derive output folder: strip www., replace dots with hyphens, append -seo (e.g. staydingleway-ie-seo).
+2. Read the pre-crawled content above to understand the site. Only use WebFetch as a fallback if a specific page is missing from the crawled content.
+3. Choose 15–20 keywords tailored to this site's niche from what you learned in the crawl.
+4. Run keyword research using the method below that matches your research mode:
+
+   **If research mode is `mcp`:**
+   For each keyword, make an HTTP POST to the MCP server using this exact curl pattern:
+   ```bash
+   curl -s -X POST "http://localhost:8000/mcp" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <SERP_KEY>" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"params":{"engine":"google","q":"KEYWORD_HERE","gl":"ie","hl":"en","num":"10"},"mode":"compact"}}}'
+   ```
+   Do NOT use GET. Do NOT use `/search`, `/sse`, or `/{key}/mcp` path formats. Do NOT omit the Authorization header.
+   Parse the response and save to ./<dirname>/serp/<slug>.json with fields: keyword, organic (array of {position, title, link, snippet}), people_also_ask (array of strings), related_searches (array of strings).
+
+   **If research mode is `direct`:**
+   Run: `node run.js research <URL> <SERP_KEY>`
+
+5. Combine all per-keyword files into ./<dirname>/serp/all_results.json (array of keyword objects).
 6. Generate gap report: `node run.js report <URL>`
 7. Write strategy doc at ./<dirname>/SEO_CONTENT_STRATEGY.md with sections: What Was Done, Key Findings, Prioritised Page Recommendations, Quick Wins, Build Order.
 8. Export PDF: `python3 generate_pdf.py ./<dirname>`. If Playwright Chromium not installed, run `playwright install chromium` first.
-9. Do NOT write to or reset config.js — this is a parallel run and config.js is shared. Skip the keyword write and reset steps entirely.
+9. Do NOT write to or reset config.js — this is a parallel run and config.js is shared.
 
 When done, report: DONE: <URL>
+If any curl returns a non-200 or an error field in the JSON, report: FAILED: <URL> — <reason>
 ---
 
 ### Step C: Report summary
@@ -116,15 +149,115 @@ Arguments from the command line: `$ARGUMENTS`
 Parse `$ARGUMENTS` as follows:
 - First argument: the client site URL (required)
   Normalise bare domains by prepending https:// (e.g. staydingleway.ie → https://staydingleway.ie).
-- Second argument: the SerpAPI key (optional — falls back to `SERP_API_KEY` env var)
+- Second argument: the SerpAPI key (optional — falls back to `SERP_API_KEY` env var, then MCP server)
 
 If no URL is provided, ask the user for it before proceeding.
+
+**Key resolution order (single-domain):**
+
+1. Second argument passed to the command
+2. `SERP_API_KEY` environment variable
+3. MCP server at `localhost:8000` (detected via healthcheck)
+
+> Note: this ordering applies only to argument parsing. Once Step 0 runs, MCP is the preferred research method (Option A) regardless of whether a key is also available.
+
+If neither argument nor env var is present, run the MCP healthcheck before stopping:
+
+```bash
+curl -s --max-time 2 http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
+```
+
+- Response contains `"healthy"` → validate by calling the MCP `search` tool **directly from this session** (do NOT use curl for search validation — the session key is embedded in the MCP connection):
+  ```json
+  { "params": { "engine": "google", "q": "test", "num": "1" }, "mode": "compact" }
+  ```
+  - Returns results → set `$RESEARCH_MODE=mcp`, leave `$SERP_KEY` empty, proceed to Step 0 (preflight will confirm and pass through)
+  - Returns auth/quota error → STOP with preflight failure message (see Step 0)
+- Not reachable → STOP with preflight failure message (see Step 0)
 
 ---
 
 ## Instructions
 
 Work from the project root (current working directory). Do not rewrite any scripts — use the tools already in place.
+
+### 0. Preflight check — verify SerpAPI key before any work begins
+
+**Run this before crawling, before spawning sub-agents, before anything else.**
+
+Resolve the research mode in this order of preference:
+
+**Option A — MCP server (preferred)**
+
+Check if the MCP server is reachable:
+
+```bash
+curl -s http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
+```
+
+If it returns `{"status":"healthy"...}`, the server is up. The key is embedded in the Claude Code session's MCP connection — **do not attempt to read it from env vars or config.js, and do not test it via curl**. Instead, validate by calling the MCP `search` tool directly from this session with a 1-result test query:
+
+```json
+{ "params": { "engine": "google", "q": "test", "num": "1" }, "mode": "compact" }
+```
+
+- Returns results → ✅ set `$RESEARCH_MODE=mcp`, proceed
+- Returns auth/quota error → ❌ STOP — session key is invalid or quota exhausted
+
+**Option B — Direct API key (fallback, only if MCP not reachable)**
+
+Resolve the key by checking these sources in order — use the first non-placeholder value found:
+
+1. **CLI argument** — second token passed to the command
+2. **`SERP_API_KEY` env var** — set in shell profile or exported in terminal
+3. **`~/.claude/settings.json` env block** — Claude Code injects this at session start; read it directly:
+   ```bash
+   node -e "
+     const fs = require('fs');
+     const p = require('os').homedir() + '/.claude/settings.json';
+     try {
+       const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+       const k = (s.env || {}).SERP_API_KEY || '';
+       console.log(k && !k.includes('YOUR') ? k : '');
+     } catch { console.log(''); }
+   "
+   ```
+4. **`config.js` `serpApiKey` field** — only if it is not a placeholder:
+   ```bash
+   node -e "const c = require('./config.js'); const k = c.serpApiKey || ''; console.log(k && !k.includes('YOUR') ? k : '');"
+   ```
+
+Set `$SERP_KEY` to the first non-empty result from the above. If all return empty, no key is available.
+
+If a key was found, validate it:
+```bash
+curl -s "https://serpapi.com/search.json?engine=google&q=test&num=1&api_key=${SERP_KEY}" \
+  | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); process.exit(d.error?1:0)" \
+  && echo "KEY_VALID" || echo "KEY_INVALID"
+```
+
+- `KEY_VALID` → ✅ set `$RESEARCH_MODE=direct`, proceed
+- `KEY_INVALID` → ❌ STOP
+
+**If neither option is available, stop immediately:**
+
+> **Preflight failed — SerpAPI not available.**
+>
+> _No MCP server and no API key found:_
+> - Start the MCP server, or
+> - Pass a key as an argument: `/seo:audit https://site.com YOUR_KEY`, or
+> - Set the env var: `export SERP_API_KEY=your_key_here`
+>
+> _MCP server up but search failed:_
+> - Check your SerpAPI account credits at https://serpapi.com/manage-api-key
+>
+> No audit credits have been used. Re-run once resolved.
+
+Do not proceed to crawling or any other step until preflight passes.
+
+**Store `$RESEARCH_MODE`** (`mcp` or `direct`) for use in all subsequent steps and sub-agent prompts.
+
+> **Sub-agent key scoping:** The MCP session key is not accessible to sub-agents via env or config. Sub-agents must call the MCP server directly via HTTP with the `Authorization: Bearer` header. The key must be extracted from the MCP server URL or passed explicitly — see sub-agent template in Step B above.
 
 ### 1. Determine research mode
 
@@ -135,13 +268,18 @@ There are two ways to run keyword research. Prefer MCP if the server is availabl
 Check if the MCP server is running:
 
 ```bash
-curl -s http://localhost:8000/health 2>/dev/null || echo "not reachable"
+curl -s http://localhost:8000/healthcheck 2>/dev/null || echo "not reachable"
 ```
 
-If reachable, the server responds with a JSON error asking for an API key — that means it's up. Use the MCP `search` tool directly for all keyword research in step 5 instead of running `node run.js research`. The MCP server URL format is:
+Use `/healthcheck` — not `/health` or `/` (those return 401 without a key and are unreliable for reachability checks). A 200 response means the server is up.
 
-```
-http://localhost:8000/{SERP_API_KEY}/mcp
+If reachable, use the MCP `search` tool directly for all keyword research in step 5 instead of running `node run.js research`. Make requests via:
+
+```bash
+curl -s -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <SERP_KEY>" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"params":{"engine":"google","q":"KEYWORD","gl":"ie","hl":"en","num":"10"},"mode":"compact"}}}'
 ```
 
 If it is not reachable, tell the user they can optionally start it:
@@ -154,19 +292,33 @@ Then fall back to Option B.
 
 **Option B — Direct API key (fallback)**
 
-Check for a key in this order:
+Resolve the key by checking these sources in order — use the first non-placeholder value found:
 
-1. Second argument passed to the command (e.g. `/seo:audit https://site.com MY_KEY`)
-2. `SERP_API_KEY` environment variable
-3. `serpApiKey` field already set in `config.js`
+1. **CLI argument** — second token passed to the command
+2. **`SERP_API_KEY` env var** — set in shell profile or exported in terminal
+3. **`~/.claude/settings.json` env block** — Claude Code injects this at session start; read it directly:
+   ```bash
+   node -e "
+     const fs = require('fs');
+     const p = require('os').homedir() + '/.claude/settings.json';
+     try {
+       const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+       const k = (s.env || {}).SERP_API_KEY || '';
+       console.log(k && !k.includes('YOUR') ? k : '');
+     } catch { console.log(''); }
+   "
+   ```
+4. **`config.js` `serpApiKey` field** — only if it is not a placeholder:
+   ```bash
+   node -e "const c = require('./config.js'); const k = c.serpApiKey || ''; console.log(k && !k.includes('YOUR') ? k : '');"
+   ```
 
-If none are present, tell the user:
+If none return a value, tell the user:
 
-> No SerpAPI key found. Either start the MCP server or provide a key:
-> ```bash
-> export SERP_API_KEY=your_key_here
-> ```
-> Then re-run `/seo:audit`.
+> No SerpAPI key found. Options:
+> - Pass it as an argument: `/seo:audit https://site.com YOUR_KEY`
+> - Set env var: `export SERP_API_KEY=your_key_here`
+> - Add to `~/.claude/settings.json` under `"env": { "SERP_API_KEY": "your_key_here" }`
 
 Do not proceed without either the MCP server or an API key.
 
@@ -186,7 +338,9 @@ node run.js crawl <url>
 
 Read the crawled content in `./<client>-seo/content/` to understand the business, existing topics, and content gaps.
 
-If the crawler only captures the homepage (common on heavily JS-rendered sites like Wix or Squarespace), supplement by fetching the live site with the WebFetch tool to extract the full property/product/service inventory before choosing keywords.
+**The Playwright crawl executes JavaScript and captures the fully-rendered DOM** — use it as the authoritative source for what is actually on the page (schema markup, OG tags, image attributes, etc.). Do NOT use WebFetch to re-analyse pages already crawled, as raw HTTP fetches miss JS-rendered content and produce false positives.
+
+If the crawler only captures the homepage (common on heavily JS-rendered sites like Wix or Squarespace), use WebFetch only to discover the list of additional pages/services — then treat the crawled homepage content as the ground truth for on-page analysis.
 
 ### 4. Choose keywords
 

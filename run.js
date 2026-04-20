@@ -9,6 +9,7 @@ const { linkAudit }        = require('./scripts/link-audit');
 const { research }         = require('./scripts/research');
 const { generateReport }   = require('./scripts/report');
 const { suggestKeywords }  = require('./scripts/suggest-keywords');
+const { preflightResearch } = require('./scripts/preflight-research');
 
 function validateAndNormaliseUrl(raw) {
   if (!raw || typeof raw !== 'string') {
@@ -74,13 +75,18 @@ async function main() {
   }
 
   if (step === 'research' || step === 'all') {
-    let researchConfig = config;
-    if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
-      console.log('\n--- Extracting keyword suggestions from crawled content ---');
-      researchConfig = await suggestKeywords(config);
+    const pf = await preflightResearch(config);
+    if (!pf.proceed) {
+      console.log('\n--- Step 2: Keyword research skipped ---');
+    } else {
+      let researchConfig = config;
+      if (config.keywords.every(k => /^your keyword/i.test(k.trim()))) {
+        console.log('\n--- Extracting keyword suggestions from crawled content ---');
+        researchConfig = await suggestKeywords(config);
+      }
+      console.log('\n--- Step 2: Keyword research ---');
+      await research(researchConfig);
     }
-    console.log('\n--- Step 2: Keyword research ---');
-    await research(researchConfig);
   }
 
   if (step === 'report' || step === 'all') {
