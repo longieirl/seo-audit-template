@@ -1,12 +1,12 @@
 // scripts/preflight-research.js
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const PLACEHOLDER_KEY = 'YOUR_SERP_API_KEY';
 const MCP_HEALTHCHECK = 'http://localhost:8000/healthcheck';
 
 function checkMcpReachable() {
   try {
-    const out = execSync(`curl -s --max-time 2 ${MCP_HEALTHCHECK}`, { encoding: 'utf8' });
+    const out = execFileSync('curl', ['-s', '--max-time', '2', MCP_HEALTHCHECK], { encoding: 'utf8' });
     return out.includes('healthy');
   } catch {
     return false;
