@@ -18,11 +18,20 @@ When `$ARGUMENTS` contains two or more URLs, this command runs in **multi-domain
 Split `$ARGUMENTS` on whitespace. Classify each token:
 
 - URL token — contains a `.` and no spaces, optionally prefixed with `http://` or `https://`. Normalise bare domains by prepending `https://` (e.g. `staydingleway.ie` → `https://staydingleway.ie`).
-- API key token — the last token that is NOT a URL. Use as the SerpAPI key. Falls back to `SERP_API_KEY` env var or `config.js` if absent.
+- API key token — the last token that is NOT a URL. Use as the SerpAPI key.
 
 Mode selection:
 - 1 URL → skip this section, proceed to single-domain instructions below
 - 2+ URLs → continue with multi-domain steps below
+
+> **Multi-domain requires an explicit API key.** Sub-agents cannot inherit the parent session's MCP connection — the MCP `search` tool is session-bound and not passed to spawned agents. An explicit `SERP_API_KEY` must be provided as an argument or env var so it can be passed in each sub-agent prompt. If only the MCP session is available (no explicit key), refuse multi-domain mode and tell the user:
+>
+> **Multi-domain mode requires an explicit SerpAPI key:**
+> ```
+> /seo:audit https://site1.com https://site2.com YOUR_KEY
+> ```
+> Or: `export SERP_API_KEY=your_key_here` then re-run.
+> Single-domain audits can use the MCP session key directly.
 
 ### Step A: Check for existing audits
 
