@@ -4,6 +4,9 @@ const assert = require('assert');
 const childProcess = require('child_process');
 
 async function withMockExecFileSync(mockFn, fn) {
+  // IMPORTANT: loadFresh() must be called INSIDE the mock callback (after execFileSync is patched)
+  // because preflight-research.js uses a destructured const binding that captures the reference
+  // at module load time. The mock must be in place before require() runs.
   const original = childProcess.execFileSync;
   childProcess.execFileSync = mockFn;
   try {
@@ -37,7 +40,7 @@ async function runTests() {
       const { preflightResearch } = loadFresh();
       return preflightResearch({ serpApiKey: 'YOUR_SERP_API_KEY' });
     });
-    assert.strictEqual(result.proceed, false);
+    assert.deepStrictEqual(result, { proceed: false, reason: 'no-source' });
     console.log('PASS: placeholder key not treated as valid');
   }
 
@@ -67,21 +70,43 @@ async function runTests() {
       const { preflightResearch } = loadFresh();
       return preflightResearch({ serpApiKey: undefined });
     });
-    assert.strictEqual(result.proceed, false);
+    assert.deepStrictEqual(result, { proceed: false, reason: 'no-source' });
     console.log('PASS: undefined key treated as missing');
   }
 
-  // Test 6: checkMcpReachable never throws even on execFileSync error
+  // Test 6: whitespace-only key → treated as missing
+  {
+    const result = await withMockExecFileSync(() => { throw new Error('ECONNREFUSED'); }, async () => {
+      const { preflightResearch } = loadFresh(); // must be inside mock callback
+      return preflightResearch({ serpApiKey: '   ' });
+    });
+    assert.deepStrictEqual(result, { proceed: false, reason: 'no-source' });
+    console.log('PASS: whitespace-only key treated as missing');
+  }
+
+  // Test 7: checkMcpReachable returns true when curl output contains 'healthy'
+  {
+    await withMockExecFileSync(() => '{"status":"healthy"}', async () => {
+      const { checkMcpReachable } = loadFresh(); // must be inside mock callback
+      const result = checkMcpReachable();
+      assert.strictEqual(result, true, 'checkMcpReachable should return true for healthy response');
+    });
+    console.log('PASS: checkMcpReachable returns true for healthy response');
+  }
+
+  // Test 8: checkMcpReachable never throws even on execFileSync error
   {
     await withMockExecFileSync(() => { throw new Error('ECONNREFUSED'); }, async () => {
-      const { checkMcpReachable } = loadFresh();
+      const { checkMcpReachable } = loadFresh(); // must be inside mock callback
       let threw = false;
+      let result;
       try {
-        checkMcpReachable();
+        result = checkMcpReachable();
       } catch {
         threw = true;
       }
       assert.strictEqual(threw, false, 'checkMcpReachable must not throw');
+      assert.strictEqual(result, false, 'checkMcpReachable must return false on error');
     });
     console.log('PASS: checkMcpReachable never throws');
   }
