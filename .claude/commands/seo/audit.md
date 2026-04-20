@@ -126,6 +126,49 @@ If no URL is provided, ask the user for it before proceeding.
 
 Work from the project root (current working directory). Do not rewrite any scripts — use the tools already in place.
 
+### 0. Preflight check — verify SerpAPI key before any work begins
+
+**Run this before crawling, before spawning sub-agents, before anything else.**
+
+Resolve the SerpAPI key in this order:
+1. Key passed as an argument (e.g. `/seo:audit https://site.com MY_KEY`)
+2. `SERP_API_KEY` environment variable
+3. MCP server running at `localhost:8000` (reachable = server is up; key is embedded in the session)
+
+```bash
+# Check env var
+echo "SERP_API_KEY=${SERP_API_KEY:-not set}"
+# Check config.js
+node -e "const c = require('./config.js'); console.log('config key:', c.serpApiKey)"
+# Check MCP server
+curl -s http://localhost:8000/health 2>/dev/null || echo "not reachable"
+```
+
+**Decision table:**
+
+| MCP reachable? | Env/arg key present? | Action |
+|---|---|---|
+| Yes | (any) | ✅ Use MCP — proceed |
+| No | Yes (non-placeholder) | ✅ Use direct API key — proceed |
+| No | No / placeholder | ❌ STOP — inform user |
+
+If no key is available, **stop immediately** and tell the user:
+
+> **Preflight failed — no SerpAPI key found.**
+>
+> Provide a key via one of:
+> - Pass it as an argument: `/seo:audit https://site.com YOUR_KEY`
+> - Set the env var: `export SERP_API_KEY=your_key_here`
+> - Start the MCP server: see setup instructions below
+>
+> Re-run `/seo:audit` once a key is available. No credits have been used.
+
+Do not proceed to crawling or any other step until this check passes.
+
+**Store the resolved `$RESEARCH_MODE`** (`mcp` or `direct`) and **`$SERP_KEY`** (the actual key string, or `"mcp"` if using the server) for use in all subsequent steps and in every sub-agent prompt.
+
+> **Sub-agent key scoping:** The MCP `search` tool is bound to the parent Claude Code session — sub-agents cannot inherit it. When spawning parallel sub-agents in multi-domain mode, always pass `$SERP_KEY` explicitly in the sub-agent prompt. If `$RESEARCH_MODE` is `mcp`, instruct sub-agents to call the MCP server directly via HTTP using the key extracted from the MCP server URL, or fall back to direct API mode with the key.
+
 ### 1. Determine research mode
 
 There are two ways to run keyword research. Prefer MCP if the server is available.
