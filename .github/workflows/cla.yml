@@ -1,7 +1,7 @@
 name: DCO Check
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
@@ -12,10 +12,10 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Check DCO sign-off
-        uses: tisonkun/actions-dco@v1.1
+        uses: tisonkun/actions-dco@f1024cd563550b5632e754df11b7d30b73be54a5  # v1.1
