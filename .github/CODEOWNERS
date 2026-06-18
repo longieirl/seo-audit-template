@@ -1,2 +1,22 @@
-# All files — repo owner is the default reviewer for everything
+# Default owner for everything
 * @longieirl
+
+# Source code
+src/ @longieirl
+
+# GitHub Actions and automation
+.github/workflows/ @longieirl
+.github/CODEOWNERS @longieirl
+.github/actions/ @longieirl
+.github/dependabot.yml @longieirl
+.github/ISSUE_TEMPLATE/ @longieirl
+
+# Configuration
+*.yml @longieirl
+*.yaml @longieirl
+*.json @longieirl
+*.toml @longieirl
+
+# Security and legal
+SECURITY.md @longieirl
+LICENSE @longieirl
