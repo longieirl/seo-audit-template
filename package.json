@@ -32,7 +32,7 @@
     "test":     "node --test scripts/report.test.js"
   },
   "dependencies": {
-    "playwright-chromium": "^1.60.0",
+    "playwright-chromium": "^1.62.0",
     "turndown": "^7.2.4"
   }
 }
